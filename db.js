@@ -411,9 +411,20 @@ const db = {
     if (this.isMongo()) {
       try {
         const mongo = await this.getMongoDb();
-        const user = await mongo.collection('users').findOne({ username: normUsername });
-        if (!user || user.password !== password) {
-          throw new Error('Invalid username or password.');
+        let user = await mongo.collection('users').findOne({ username: normUsername });
+        
+        if (!user) {
+          const seedMatch = SEED_USERS.find(u => u.username.toLowerCase() === normUsername && u.password === password);
+          if (seedMatch) {
+            await mongo.collection('users').insertOne(seedMatch);
+            user = seedMatch;
+          } else {
+            throw new Error('Invalid username or password.');
+          }
+        } else {
+          if (user.password !== password) {
+            throw new Error('Invalid username or password.');
+          }
         }
         
         const sessionUser = {
@@ -437,12 +448,21 @@ const db = {
     if (this.isFirebase()) {
       try {
         const doc = await window.DcdFirebase.db.collection('users').doc(normUsername).get();
+        let user;
+        
         if (!doc.exists) {
-          throw new Error('Invalid username or password.');
-        }
-        const user = doc.data();
-        if (user.password !== password) {
-          throw new Error('Invalid username or password.');
+          const seedMatch = SEED_USERS.find(u => u.username.toLowerCase() === normUsername && u.password === password);
+          if (seedMatch) {
+            await window.DcdFirebase.db.collection('users').doc(normUsername).set(seedMatch);
+            user = seedMatch;
+          } else {
+            throw new Error('Invalid username or password.');
+          }
+        } else {
+          user = doc.data();
+          if (user.password !== password) {
+            throw new Error('Invalid username or password.');
+          }
         }
 
         const sessionUser = {
