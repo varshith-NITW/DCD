@@ -357,7 +357,7 @@ header {
 }
 
 .project-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-3px);
   border-color: var(--border-hover);
   box-shadow: var(--shadow-lg), 0 0 20px rgba(263, 90%, 65%, 0.1);
 }

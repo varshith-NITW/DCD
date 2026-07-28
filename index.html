@@ -238,6 +238,7 @@
   <script>
     let isRegisterMode = false;
     let activeProjectId = '';
+    const DEFAULT_CIRCUIT_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="340" height="200" viewBox="0 0 340 200"><rect width="100%" height="100%" fill="%230b0f19"/><g stroke="%23818cf8" stroke-width="1.5" opacity="0.3" fill="none"><path d="M 20,40 H 60 M 20,70 H 60 M 60,40 C 70,40 80,45 80,55 C 80,65 70,70 60,70 Z M 80,55 H 120 M 120,55 V 120 M 100,120 H 140 M 100,150 H 140 M 140,120 C 150,120 160,125 160,135 C 160,145 150,150 140,150 Z M 160,135 H 200 M 200,135 V 80 M 180,80 H 220 M 180,100 H 220 M 220,75 C 235,75 240,85 240,90 C 240,95 235,105 220,105 Z M 240,90 H 280"/><circle cx="20" cy="40" r="3" fill="%23818cf8"/><circle cx="20" cy="70" r="3" fill="%23818cf8"/><circle cx="100" cy="120" r="3" fill="%23818cf8"/><circle cx="100" cy="150" r="3" fill="%23818cf8"/><circle cx="180" cy="80" r="3" fill="%23818cf8"/><circle cx="180" cy="100" r="3" fill="%23818cf8"/><circle cx="280" cy="90" r="3" fill="%23818cf8"/></g></svg>`;
 
     // Initialize Page
     document.addEventListener('DOMContentLoaded', async () => {
@@ -414,7 +415,7 @@
 
         card.innerHTML = `
           <div class="project-image-wrapper">
-            <img src="${p.imageUrl}" alt="${p.title}" class="project-image" onerror="this.src='https://images.unsplash.com/photo-1601662528567-526cd06f6582?auto=format&fit=crop&w=800&q=80'">
+            <img src="${p.imageUrl || DEFAULT_CIRCUIT_SVG}" alt="${p.title}" class="project-image" onerror="this.src=DEFAULT_CIRCUIT_SVG">
           </div>
           <div class="project-content">
             <h3 class="project-card-title">${p.title}</h3>
@@ -464,12 +465,8 @@
 
       titleEl.innerText = project.title;
       
-      if (project.imageUrl) {
-        imgEl.src = project.imageUrl;
-        imgEl.style.display = 'block';
-      } else {
-        imgEl.style.display = 'none';
-      }
+      imgEl.src = project.imageUrl || DEFAULT_CIRCUIT_SVG;
+      imgEl.style.display = 'block';
 
       // Populate tags
       tagsEl.innerHTML = '';
