@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DCD - Digital Circuit Design Showcase</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="db.js"></script>
+</head>
+<body>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="nav-container">
+      <div class="logo-section">
+        <div class="logo-icon">⚡</div>
+        <div class="logo-text">DCD</div>
+      </div>
+      
+      <!-- User Profile Badge and Logout -->
+      <div class="user-profile-badge" id="userProfileBadge" style="display: none;">
+        <div class="user-profile-info">
+          <span class="user-avatar" id="currentAvatar">👤</span>
+          <div class="user-name-role">
+            <span class="user-name" id="currentName">Name</span>
+            <span class="user-role-text" id="currentRole">Role</span>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="handleLogout()">Logout</button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Storage Availability Warning -->
+  <div id="storageWarning" style="display: none; background-color: var(--danger); color: white; text-align: center; padding: 0.75rem 1.5rem; font-weight: 600; font-size: 0.9rem; z-index: 1000; position: relative;">
+    ⚠️ Warning: Local storage is disabled or blocked in your browser settings (often due to incognito mode or direct local file access). Your projects and accounts will NOT persist if you refresh the page. Please open this site using the HTTP server link (http://127.0.0.1:8080) for data storage to work.
+  </div>
+
+  <!-- Authorization Gate Panel -->
+  <div class="auth-container" id="authContainer" style="display: flex;">
+    <div class="auth-card">
+      <h2 class="auth-title" id="authTitle">DCD Login</h2>
+      <p class="auth-subtitle" id="authSubtitle">Please log in to access the Verilog designs catalog</p>
+      
+      <div class="auth-error" id="authError"></div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        <div class="form-group">
+          <label class="form-label" for="loginUsername">Username</label>
+          <input type="text" id="loginUsername" class="form-input" placeholder="e.g. alice" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Log In</button>
+      </form>
+
+      <!-- Register Form (Hidden by default) -->
+      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" style="display: none;">
+        <div class="form-group">
+          <label class="form-label" for="regName">Full Name</label>
+          <input type="text" id="regName" class="form-input" placeholder="e.g. Charlie Brown" required autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regUsername">Username</label>
+          <input type="text" id="regUsername" class="form-input" placeholder="e.g. charlie" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regPassword">Password</label>
+          <input type="password" id="regPassword" class="form-input" placeholder="••••••••" required autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Register Account</button>
+      </form>
+
+      <span class="auth-toggle-link" id="authToggleLink" onclick="toggleAuthForm()">Don't have an account? Register</span>
+
+
+    </div>
+  </div>
+
+  <!-- Dashboard Content (Protected) -->
+  <main class="dashboard" id="dashboardContent" style="display: none;">
+    <section class="dashboard-hero">
+      <h2>DCD Showcase Hub</h2>
+      <p>Explore, simulate, and edit digital circuit designs and Verilog hardware modules created by ECE students.</p>
+    </section>
+
+    <!-- Controls Bar (No search or tags filter, just project posting) -->
+    <section class="controls-bar">
+      <button class="btn btn-primary" id="addProjectBtn" onclick="openAddModal()">
+        <span>+</span> Add Verilog Module
+      </button>
+    </section>
+
+    <!-- Project List Grid -->
+    <section class="project-grid" id="projectGrid">
+      <!-- Populated dynamically -->
+    </section>
+  </main>
+
+  <!-- Add Project Modal -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Share Verilog Design</h3>
+        <button class="modal-close" onclick="closeAddModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addProjectForm" onsubmit="handleCreateProject(event)">
+          <div class="form-group">
+            <label class="form-label" for="projTitle">Module / Block Title *</label>
+            <input type="text" id="projTitle" class="form-input" placeholder="e.g. 16-Bit ALU Core" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="projShortDesc">Short Summary *</label>
+            <input type="text" id="projShortDesc" class="form-input" placeholder="A brief one-sentence description of the design block..." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="projDesc">Detailed Verilog Specifications</label>
+            <textarea id="projDesc" class="form-textarea" placeholder="Describe the block logic, inputs, outputs, simulations, and hardware synthesis targets..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="projTags">Design Tags (Comma-separated)</label>
+            <input type="text" id="projTags" class="form-input" placeholder="e.g. Verilog, Hardware, FPGA">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="projImage">Design Cover / Diagram URL</label>
+            <input type="url" id="projImage" class="form-input" placeholder="https://... (Leave blank for default diagram)">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="projLink">GitHub Code / Diagram Link</label>
+            <input type="url" id="projLink" class="form-input" placeholder="https://github.com/project-code">
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Publish Design</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2026 DCD - Digital Circuit Design Showcase. Built for ECE students and faculty.</p>
+    <div class="footer-links">
+      <a href="#" class="footer-link" onclick="resetDatabase(event)">Reset Database to Defaults</a>
+    </div>
+  </footer>
+
+  <!-- Script Logic -->
+  <script>
+    let isRegisterMode = false;
+
+    // Initialize Page
+    document.addEventListener('DOMContentLoaded', () => {
+      ProjectDb.init();
+      if (!ProjectDb.isLocalStorageAvailable()) {
+        document.getElementById('storageWarning').style.display = 'block';
+      }
+      checkAuth();
+
+      // Close modal on escape key
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeAddModal();
+        }
+      });
+      
+      // Close modal when clicking outside contents
+      document.getElementById('addModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('addModal')) {
+          closeAddModal();
+        }
+      });
+
+      // Synchronize changes if user changes role in another tab
+      window.addEventListener('storage', () => {
+        checkAuth();
+      });
+    });
+
+    // Check if the user is authenticated and update screen state
+    function checkAuth() {
+      const user = ProjectDb.getCurrentUser();
+      const authContainer = document.getElementById('authContainer');
+      const dashboardContent = document.getElementById('dashboardContent');
+      const profileBadge = document.getElementById('userProfileBadge');
+
+      if (user) {
+        // Authenticated
+        authContainer.style.display = 'none';
+        dashboardContent.style.display = 'block';
+        profileBadge.style.display = 'flex';
+
+        // Update profile badge contents
+        document.getElementById('currentAvatar').innerText = user.avatar;
+        document.getElementById('currentName').innerText = user.name;
+        document.getElementById('currentRole').innerText = user.role;
+
+        // Populate lists
+        renderProjects();
+      } else {
+        // Unauthenticated
+        authContainer.style.display = 'flex';
+        dashboardContent.style.display = 'none';
+        profileBadge.style.display = 'none';
+        hideError();
+      }
+    }
+
+    // Toggle between Login and Register views
+    function toggleAuthForm() {
+      isRegisterMode = !isRegisterMode;
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+      const title = document.getElementById('authTitle');
+      const subtitle = document.getElementById('authSubtitle');
+      const toggleLink = document.getElementById('authToggleLink');
+      
+      hideError();
+
+      if (isRegisterMode) {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'block';
+        title.innerText = 'Register Account';
+        subtitle.innerText = 'Create a classmate account to get started';
+        toggleLink.innerText = 'Already have an account? Log In';
+      } else {
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+        title.innerText = 'DCD Login';
+        subtitle.innerText = 'Please log in to access the Verilog designs catalog';
+        toggleLink.innerText = "Don't have an account? Register";
+      }
+    }
+
+    // Form Submissions
+    function handleLoginSubmit(event) {
+      event.preventDefault();
+      hideError();
+
+      const usernameInput = document.getElementById('loginUsername').value;
+      const passwordInput = document.getElementById('loginPassword').value;
+
+      try {
+        ProjectDb.login(usernameInput, passwordInput);
+        document.getElementById('loginForm').reset();
+        checkAuth();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function handleRegisterSubmit(event) {
+      event.preventDefault();
+      hideError();
+
+      const nameInput = document.getElementById('regName').value;
+      const usernameInput = document.getElementById('regUsername').value;
+      const passwordInput = document.getElementById('regPassword').value;
+
+      try {
+        ProjectDb.register(usernameInput, nameInput, passwordInput);
+        document.getElementById('registerForm').reset();
+        checkAuth();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function handleLogout() {
+      ProjectDb.logout();
+      checkAuth();
+    }
+
+    function showError(msg) {
+      const errBox = document.getElementById('authError');
+      errBox.innerText = msg;
+      errBox.style.display = 'block';
+    }
+
+    function hideError() {
+      const errBox = document.getElementById('authError');
+      errBox.innerText = '';
+      errBox.style.display = 'none';
+    }
+
+    // Render project grid
+    function renderProjects() {
+      const grid = document.getElementById('projectGrid');
+      const projects = ProjectDb.getProjects();
+      const currentUser = ProjectDb.getCurrentUser();
+      
+      grid.innerHTML = '';
+
+      if (!currentUser) return;
+
+      if (projects.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-icon">📂</div>
+            <p class="empty-text">No digital designs published yet.</p>
+          </div>
+        `;
+        return;
+      }
+
+      projects.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'project-card';
+        card.onclick = () => window.open(`project.html?id=${p.id}`, '_blank');
+
+        card.innerHTML = `
+          <div class="project-image-wrapper">
+            <img src="${p.imageUrl}" alt="${p.title}" class="project-image" onerror="this.src='https://images.unsplash.com/photo-1601662528567-526cd06f6582?auto=format&fit=crop&w=800&q=80'">
+          </div>
+          <div class="project-content">
+            <h3 class="project-card-title">${p.title}</h3>
+            <p class="project-card-desc">${p.shortDescription}</p>
+            <div class="project-card-footer">
+              <div class="project-author">
+                <div class="project-author-avatar">
+                  ${p.creatorId === 'alice' ? '👩‍💻' : p.creatorId === 'bob' ? '👨‍💻' : '👤'}
+                </div>
+                <span>${p.creatorName}</span>
+              </div>
+              <div class="project-card-tags">
+                ${p.tags.slice(0, 2).map(t => `<span class="project-card-tag">${t}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Modal Control
+    function openAddModal() {
+      document.getElementById('addModal').classList.add('active');
+      document.getElementById('projTitle').focus();
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').classList.remove('active');
+      document.getElementById('addProjectForm').reset();
+    }
+
+    // Form Submission
+    function handleCreateProject(event) {
+      event.preventDefault();
+      
+      const title = document.getElementById('projTitle').value.trim();
+      const shortDescription = document.getElementById('projShortDesc').value.trim();
+      const description = document.getElementById('projDesc').value.trim();
+      const tagsInput = document.getElementById('projTags').value.trim();
+      const imageUrl = document.getElementById('projImage').value.trim();
+      const externalLink = document.getElementById('projLink').value.trim();
+
+      const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t !== '') : [];
+
+      try {
+        ProjectDb.createProject({
+          title,
+          shortDescription,
+          description,
+          tags,
+          imageUrl,
+          externalLink
+        });
+        
+        closeAddModal();
+        renderProjects();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // Reset Database Utility
+    function resetDatabase(e) {
+      e.preventDefault();
+      if (confirm('Are you sure you want to revert all changes and load default projects?')) {
+        ProjectDb.resetDatabase();
+      }
+    }
+  </script>
+</body>
+</html>

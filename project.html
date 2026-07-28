@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Details - DCD</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="db.js"></script>
+</head>
+<body>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="nav-container">
+      <div class="logo-section">
+        <a href="index.html" class="logo-section">
+          <div class="logo-icon">⚡</div>
+          <div class="logo-text">DCD</div>
+        </a>
+      </div>
+      
+      <!-- User Profile Badge and Logout -->
+      <div class="user-profile-badge" id="userProfileBadge" style="display: none;">
+        <div class="user-profile-info">
+          <span class="user-avatar" id="currentAvatar">👤</span>
+          <div class="user-name-role">
+            <span class="user-name" id="currentName">Name</span>
+            <span class="user-role-text" id="currentRole">Role</span>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Storage Availability Warning -->
+  <div id="storageWarning" style="display: none; background-color: var(--danger); color: white; text-align: center; padding: 0.75rem 1.5rem; font-weight: 600; font-size: 0.9rem; z-index: 1000; position: relative;">
+    ⚠️ Warning: Local storage is disabled or blocked in your browser settings (often due to incognito mode or direct local file access). Your projects and accounts will NOT persist if you refresh the page. Please open this site using the HTTP server link (http://127.0.0.1:8080) for data storage to work.
+  </div>
+
+  <!-- Project Details Content -->
+  <main class="detail-container">
+    <a href="index.html" class="back-link">&larr; Back to Dashboard</a>
+    
+    <article id="projectDetails" class="detail-card" style="display: none;">
+      <img id="detailImage" src="" alt="Project Image" class="detail-hero-image" onerror="this.src='https://images.unsplash.com/photo-1601662528567-526cd06f6582?auto=format&fit=crop&w=800&q=80'">
+      
+      <div class="detail-content">
+        <header class="detail-header">
+          <div class="detail-meta-left">
+            <div class="detail-tags" id="detailTags">
+              <!-- Dynamic tags -->
+            </div>
+            <h1 class="detail-title" id="detailTitle">Design Title</h1>
+            <div class="detail-meta-row">
+              <span class="detail-creator">
+                <span class="creator-avatar" id="detailCreatorAvatar">👤</span>
+                <span id="detailCreatorName">Creator Name</span>
+              </span>
+              <span class="detail-date" id="detailDate">Date Created</span>
+            </div>
+          </div>
+        </header>
+
+        <section class="detail-body" id="detailBody">
+          <!-- Full specifications text -->
+        </section>
+
+        <footer class="detail-footer-actions">
+          <button class="btn btn-primary" id="editProjectBtn" onclick="openEditModal()" style="display: none;">
+            ✏️ Edit Design Details
+          </button>
+          <a id="visitProjectBtn" href="" target="_blank" class="btn btn-secondary" style="display: none;">
+            🌐 Open Design Code/GitHub
+          </a>
+          <button class="btn btn-danger" id="deleteProjectBtn" onclick="handleDeleteProject()" style="display: none;">
+            🗑️ Delete Design
+          </button>
+        </footer>
+      </div>
+    </article>
+
+    <!-- Error/Not Found Container -->
+    <div id="notFoundContainer" class="empty-state" style="display: none;">
+      <div class="empty-icon">⚠️</div>
+      <h2>Design Block Not Found</h2>
+      <p class="empty-text">The requested design module ID does not exist or may have been deleted.</p>
+      <a href="index.html" class="btn btn-primary">Return to Dashboard</a>
+    </div>
+  </main>
+
+  <!-- Edit Project Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Verilog Design Details</h3>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editProjectForm" onsubmit="handleUpdateProject(event)">
+          <div class="form-group">
+            <label class="form-label" for="editTitle">Design Module Title *</label>
+            <input type="text" id="editTitle" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editShortDesc">Short Summary *</label>
+            <input type="text" id="editShortDesc" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editDesc">Detailed Verilog Specifications</label>
+            <textarea id="editDesc" class="form-textarea"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editTags">Design Tags (Comma-separated)</label>
+            <input type="text" id="editTags" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editImage">Design Cover / Diagram URL</label>
+            <input type="url" id="editImage" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editLink">GitHub Code / Diagram Link</label>
+            <input type="url" id="editLink" class="form-input">
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2026 DCD - Digital Circuit Design Showcase. Built for ECE students and faculty.</p>
+  </footer>
+
+  <script>
+    let projectId = '';
+    let currentProject = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      ProjectDb.init();
+      if (!ProjectDb.isLocalStorageAvailable()) {
+        document.getElementById('storageWarning').style.display = 'block';
+      }
+      
+      const params = new URLSearchParams(window.location.search);
+      projectId = params.get('id');
+
+      checkAuthAndLoad();
+
+      // Listen for role switcher/session events in other tabs
+      window.addEventListener('storage', () => {
+        checkAuthAndLoad();
+      });
+
+      // Escape key closes modal
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeEditModal();
+        }
+      });
+
+      // Close modal on background click
+      document.getElementById('editModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('editModal')) {
+          closeEditModal();
+        }
+      });
+    });
+
+    // Check auth, redirect if unauthenticated, otherwise render details
+    function checkAuthAndLoad() {
+      const user = ProjectDb.getCurrentUser();
+      const profileBadge = document.getElementById('userProfileBadge');
+
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Display header profile badge
+      profileBadge.style.display = 'flex';
+      document.getElementById('currentAvatar').innerText = user.avatar;
+      document.getElementById('currentName').innerText = user.name;
+      document.getElementById('currentRole').innerText = user.role;
+
+      // Load specific details
+      loadProjectDetails();
+    }
+
+    function handleLogout() {
+      ProjectDb.logout();
+      window.location.href = 'index.html';
+    }
+
+    // Query and Render project data
+    function loadProjectDetails() {
+      currentProject = ProjectDb.getProject(projectId);
+
+      if (!currentProject) {
+        document.getElementById('projectDetails').style.display = 'none';
+        document.getElementById('notFoundContainer').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('notFoundContainer').style.display = 'none';
+      document.getElementById('projectDetails').style.display = 'block';
+
+      // Update Document Title
+      document.title = `${currentProject.title} - DCD`;
+
+      // Set text details
+      document.getElementById('detailTitle').innerText = currentProject.title;
+      document.getElementById('detailCreatorName').innerText = currentProject.creatorName;
+      document.getElementById('detailCreatorAvatar').innerText = 
+        currentProject.creatorId === 'alice' ? '👩‍💻' : currentProject.creatorId === 'bob' ? '👨‍💻' : '👤';
+      
+      const createdDate = new Date(currentProject.createdAt);
+      document.getElementById('detailDate').innerText = createdDate.toLocaleDateString(undefined, { 
+        year: 'numeric', month: 'long', day: 'numeric' 
+      });
+
+      // Images & Links
+      document.getElementById('detailImage').src = currentProject.imageUrl;
+      
+      const visitBtn = document.getElementById('visitProjectBtn');
+      if (currentProject.externalLink) {
+        visitBtn.href = currentProject.externalLink;
+        visitBtn.style.display = 'inline-flex';
+      } else {
+        visitBtn.style.display = 'none';
+      }
+
+      // Format description text paragraphs
+      const bodyContainer = document.getElementById('detailBody');
+      bodyContainer.innerHTML = '';
+      if (currentProject.description) {
+        const paragraphs = currentProject.description.split('\n\n');
+        paragraphs.forEach(pText => {
+          if (pText.trim()) {
+            const p = document.createElement('p');
+            p.innerText = pText.trim();
+            bodyContainer.appendChild(p);
+          }
+        });
+      } else {
+        const p = document.createElement('p');
+        p.innerText = currentProject.shortDescription;
+        p.style.fontStyle = 'italic';
+        bodyContainer.appendChild(p);
+      }
+
+      // Populate tags
+      const tagsContainer = document.getElementById('detailTags');
+      tagsContainer.innerHTML = '';
+      if (currentProject.tags && currentProject.tags.length > 0) {
+        currentProject.tags.forEach(t => {
+          const badge = document.createElement('span');
+          badge.className = 'detail-tag';
+          badge.innerText = t;
+          tagsContainer.appendChild(badge);
+        });
+      }
+
+      // Read-only option removed: all logged in users can edit/delete
+      const editBtn = document.getElementById('editProjectBtn');
+      const deleteBtn = document.getElementById('deleteProjectBtn');
+
+      editBtn.style.display = 'inline-flex';
+      deleteBtn.style.display = 'inline-flex';
+    }
+
+    // Modal Handlers
+    function openEditModal() {
+      if (!currentProject) return;
+
+      document.getElementById('editTitle').value = currentProject.title;
+      document.getElementById('editShortDesc').value = currentProject.shortDescription;
+      document.getElementById('editDesc').value = currentProject.description || '';
+      document.getElementById('editTags').value = currentProject.tags ? currentProject.tags.join(', ') : '';
+      document.getElementById('editImage').value = currentProject.imageUrl || '';
+      document.getElementById('editLink').value = currentProject.externalLink || '';
+
+      document.getElementById('editModal').classList.add('active');
+      document.getElementById('editTitle').focus();
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('active');
+    }
+
+    function handleUpdateProject(event) {
+      event.preventDefault();
+
+      const title = document.getElementById('editTitle').value.trim();
+      const shortDescription = document.getElementById('editShortDesc').value.trim();
+      const description = document.getElementById('editDesc').value.trim();
+      const tagsInput = document.getElementById('editTags').value.trim();
+      const imageUrl = document.getElementById('editImage').value.trim();
+      const externalLink = document.getElementById('editLink').value.trim();
+
+      const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t !== '') : [];
+
+      try {
+        ProjectDb.updateProject(projectId, {
+          title,
+          shortDescription,
+          description,
+          tags,
+          imageUrl,
+          externalLink
+        });
+        
+        closeEditModal();
+        loadProjectDetails();
+      } catch (err) {
+        alert('Failed to edit: ' + err.message);
+      }
+    }
+
+    function handleDeleteProject() {
+      if (confirm('Are you sure you want to permanently delete this design block? This action cannot be undone.')) {
+        try {
+          ProjectDb.deleteProject(projectId);
+          alert('Design deleted successfully.');
+          window.close(); // Try closing the tab
+          window.location.href = 'index.html'; // Fallback
+        } catch (err) {
+          alert('Failed to delete: ' + err.message);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
