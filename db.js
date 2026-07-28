@@ -6,8 +6,8 @@ const SEED_USERS = [
   { id: 'bob', username: 'bob', name: 'Bob Jones', role: 'Student', avatar: '👨‍💻', password: 'bob123' }
 ];
 
-const SEED_PROJECTS = [
-];
+// Seed projects is empty by default so the interface starts completely clean.
+const SEED_PROJECTS = [];
 
 // Database Functions
 const db = {
@@ -23,35 +23,35 @@ const db = {
     }
   },
 
-  // Initialize Database
+  // Initialize Database (Using v3 keys to clear any cached data from previous builds)
   init() {
     if (!this.isLocalStorageAvailable()) {
       console.warn("Local storage is disabled or blocked in this browser context (possibly due to direct file:// access in incognito mode). Edits will not persist across refreshes.");
     }
-
-    if (!localStorage.getItem('dcd_users')) {
-      localStorage.setItem('dcd_users', JSON.stringify(SEED_USERS));
+    
+    if (!localStorage.getItem('dcd_users_v3')) {
+      localStorage.setItem('dcd_users_v3', JSON.stringify(SEED_USERS));
     }
-    if (!localStorage.getItem('dcd_projects')) {
-      localStorage.setItem('dcd_projects', JSON.stringify(SEED_PROJECTS));
+    if (!localStorage.getItem('dcd_projects_v3')) {
+      localStorage.setItem('dcd_projects_v3', JSON.stringify(SEED_PROJECTS));
     }
   },
 
   // Get User List
   getUsers() {
     this.init();
-    return JSON.parse(localStorage.getItem('dcd_users')) || SEED_USERS;
+    return JSON.parse(localStorage.getItem('dcd_users_v3')) || SEED_USERS;
   },
 
   // Get Projects
   getProjects() {
     this.init();
-    return JSON.parse(localStorage.getItem('dcd_projects')) || SEED_PROJECTS;
+    return JSON.parse(localStorage.getItem('dcd_projects_v3')) || SEED_PROJECTS;
   },
 
   // Save all projects
   saveProjects(projects) {
-    localStorage.setItem('dcd_projects', JSON.stringify(projects));
+    localStorage.setItem('dcd_projects_v3', JSON.stringify(projects));
   },
 
   // Get a single project
@@ -64,7 +64,7 @@ const db = {
   createProject(projectData) {
     const projects = this.getProjects();
     const currentUser = this.getCurrentUser();
-
+    
     if (!currentUser) {
       throw new Error('You must be logged in to create a project.');
     }
@@ -91,7 +91,7 @@ const db = {
   updateProject(id, updatedData) {
     const projects = this.getProjects();
     const index = projects.findIndex(p => p.id === id);
-
+    
     if (index === -1) {
       throw new Error('Project not found');
     }
@@ -103,7 +103,6 @@ const db = {
       throw new Error('Unauthorized: You must be logged in to edit projects.');
     }
 
-    // Set updated data. If fields are blank we explicitly update them unless they are required title/shortDesc.
     projects[index] = {
       ...project,
       title: updatedData.title !== undefined ? updatedData.title : project.title,
@@ -135,16 +134,16 @@ const db = {
 
   // Reset to default seed data
   resetDatabase() {
-    localStorage.setItem('dcd_users', JSON.stringify(SEED_USERS));
-    localStorage.setItem('dcd_projects', JSON.stringify(SEED_PROJECTS));
-    localStorage.removeItem('dcd_session');
+    localStorage.setItem('dcd_users_v3', JSON.stringify(SEED_USERS));
+    localStorage.setItem('dcd_projects_v3', JSON.stringify(SEED_PROJECTS));
+    localStorage.removeItem('dcd_session_v3');
     location.reload();
   },
 
   // Authentication Logic
   getCurrentUser() {
     this.init();
-    const session = localStorage.getItem('dcd_session');
+    const session = localStorage.getItem('dcd_session_v3');
     return session ? JSON.parse(session) : null;
   },
 
@@ -152,7 +151,7 @@ const db = {
     this.init();
     const users = this.getUsers();
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase().trim());
-
+    
     if (!user || user.password !== password) {
       throw new Error('Invalid username or password.');
     }
@@ -165,20 +164,39 @@ const db = {
       avatar: user.avatar
     };
 
-    localStorage.setItem('dcd_session', JSON.stringify(sessionUser));
+    localStorage.setItem('dcd_session_v3', JSON.stringify(sessionUser));
+    window.dispatchEvent(new Event('storage'));
+    return sessionUser;
+  },
+
+  switchUser(userId) {
+    this.init();
+    const users = this.getUsers();
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    const sessionUser = {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: user.role,
+      avatar: user.avatar
+    };
+
+    localStorage.setItem('dcd_session_v3', JSON.stringify(sessionUser));
     window.dispatchEvent(new Event('storage'));
     return sessionUser;
   },
 
   logout() {
-    localStorage.removeItem('dcd_session');
+    localStorage.removeItem('dcd_session_v3');
     window.dispatchEvent(new Event('storage'));
   },
 
   register(username, name, password) {
     this.init();
     const users = this.getUsers();
-
+    
     const normUsername = username.toLowerCase().trim();
     const normName = name.trim().toLowerCase();
 
@@ -207,7 +225,7 @@ const db = {
     };
 
     users.push(newUser);
-    localStorage.setItem('dcd_users', JSON.stringify(users));
+    localStorage.setItem('dcd_users_v3', JSON.stringify(users));
 
     return this.login(normUsername, password);
   },
