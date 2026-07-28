@@ -96,9 +96,12 @@
     </section>
 
     <!-- Controls Bar (No search or tags filter, just project posting) -->
-    <section class="controls-bar">
+    <section class="controls-bar" style="display: flex; gap: 1rem; align-items: center;">
       <button class="btn btn-primary" id="addProjectBtn" onclick="openAddModal()">
         <span>+</span> Add Verilog Module
+      </button>
+      <button class="btn btn-secondary" id="adminPanelBtn" onclick="openAdminModal()" style="display: none;">
+        🔧 Admin Panel
       </button>
     </section>
 
@@ -229,6 +232,28 @@
     </div>
   </div>
 
+  <!-- Admin Panel Modal -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🔧 Dr. Jenkins' Admin Panel</h3>
+        <button class="modal-close" onclick="closeAdminModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: left;">
+        <h4 style="margin-bottom: 0.75rem; color: var(--accent-primary); font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Registered Classmates</h4>
+        <div id="adminUserList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); margin-bottom: 1.75rem; background: rgba(0, 0, 0, 0.2); padding: 0.5rem;">
+          <!-- Populated dynamically -->
+        </div>
+        
+        <h4 style="margin-bottom: 0.75rem; color: var(--danger); font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">System Utilities</h4>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+          <button class="btn btn-danger" onclick="handleWipeAllProjects()">🗑️ Wipe All Published Designs</button>
+          <button class="btn btn-secondary" onclick="handleResetDatabaseAdmin()">🔄 Reset Entire Database to Defaults</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer -->
   <footer>
     <p>&copy; 2026 DCD - Digital Circuit Design Showcase. Built for ECE students and faculty.</p>
@@ -257,6 +282,7 @@
           closeAddModal();
           closeDetailsModal();
           closeEditModal();
+          closeAdminModal();
         }
       });
       
@@ -276,6 +302,12 @@
       document.getElementById('editModal').addEventListener('click', (e) => {
         if (e.target === document.getElementById('editModal')) {
           closeEditModal();
+        }
+      });
+
+      document.getElementById('adminModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('adminModal')) {
+          closeAdminModal();
         }
       });
 
@@ -302,6 +334,14 @@
         document.getElementById('currentAvatar').innerText = user.avatar;
         document.getElementById('currentName').innerText = user.name;
         document.getElementById('currentRole').innerText = user.role;
+
+        // Toggle Admin Panel Button visibility
+        const adminBtn = document.getElementById('adminPanelBtn');
+        if (user.role === 'Teacher (Admin)' || user.username === 'admin1818') {
+          adminBtn.style.display = 'inline-flex';
+        } else {
+          adminBtn.style.display = 'none';
+        }
 
         // Populate lists
         await renderProjects();
@@ -515,6 +555,18 @@
         visitBtn.style.display = 'none';
       }
 
+      // Hide or show action buttons depending on ownership
+      const currentUser = ProjectDb.getCurrentUser();
+      const editBtn = document.getElementById('detailEditBtn');
+      const deleteBtn = document.getElementById('detailDeleteBtn');
+      if (currentUser && (currentUser.role === 'Teacher (Admin)' || currentUser.username === 'admin1818' || project.creatorId === currentUser.id)) {
+        editBtn.style.display = 'inline-flex';
+        deleteBtn.style.display = 'inline-flex';
+      } else {
+        editBtn.style.display = 'none';
+        deleteBtn.style.display = 'none';
+      }
+
       // Show details modal
       document.getElementById('detailsModal').classList.add('active');
     }
@@ -622,6 +674,76 @@
         await renderProjects();
       } catch (err) {
         alert('Error: ' + err.message);
+      }
+    }
+
+    // Modal Control: Admin
+    async function openAdminModal() {
+      const userListEl = document.getElementById('adminUserList');
+      userListEl.innerHTML = '<p style="padding: 1rem; color: var(--text-muted);">Loading registered classmates...</p>';
+      
+      document.getElementById('adminModal').classList.add('active');
+
+      try {
+        const users = await ProjectDb.getUsers();
+        userListEl.innerHTML = '';
+        
+        if (users.length === 0) {
+          userListEl.innerHTML = '<p style="padding: 1rem; color: var(--text-muted);">No classmates registered yet.</p>';
+          return;
+        }
+
+        users.forEach(u => {
+          const item = document.createElement('div');
+          item.style.display = 'flex';
+          item.style.justifyContent = 'space-between';
+          item.style.alignItems = 'center';
+          item.style.padding = '0.75rem 1rem';
+          item.style.borderBottom = '1px solid var(--border-color)';
+          
+          item.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.25rem;">${u.avatar || '👤'}</span>
+              <div>
+                <strong style="color: var(--text-primary); font-size: 0.9rem;">${u.name}</strong>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">@${u.username}</div>
+              </div>
+            </div>
+            <span style="font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; background: ${u.role.includes('Admin') ? 'var(--accent-primary-glow)' : 'rgba(255, 255, 255, 0.05)'}; color: ${u.role.includes('Admin') ? 'var(--accent-primary)' : 'var(--text-secondary)'}; border: 1px solid ${u.role.includes('Admin') ? 'var(--accent-primary)' : 'var(--border-color)'};">
+              ${u.role}
+            </span>
+          `;
+          userListEl.appendChild(item);
+        });
+      } catch (err) {
+        userListEl.innerHTML = `<p style="padding: 1rem; color: var(--danger);">Failed to load: ${err.message}</p>`;
+      }
+    }
+
+    function closeAdminModal() {
+      document.getElementById('adminModal').classList.remove('active');
+    }
+
+    async function handleWipeAllProjects() {
+      if (confirm('⚠️ WARNING: Are you sure you want to permanently delete all published classmate designs? This action cannot be undone.')) {
+        try {
+          await ProjectDb.wipeAllProjects();
+          alert('All classmate designs have been wiped successfully.');
+          closeAdminModal();
+          await renderProjects();
+        } catch (err) {
+          alert('Operation failed: ' + err.message);
+        }
+      }
+    }
+
+    async function handleResetDatabaseAdmin() {
+      if (confirm('⚠️ WARNING: This will reset the database and log you out. Proceed?')) {
+        try {
+          await ProjectDb.resetDatabase();
+        } catch (err) {
+          alert('Operation failed: ' + err.message);
+        }
       }
     }
 

@@ -1,7 +1,7 @@
 // Simulated, Firebase, & MongoDB Atlas Database Engine for Classroom DCD Hub with Authorization
 
 const SEED_USERS = [
-  { id: 'teacher', username: 'teacher', name: 'Dr. Sarah Jenkins', role: 'Teacher (Admin)', avatar: '🎓', password: 'teacher123' },
+  { id: 'admin1818', username: 'admin1818', name: 'DCD Administrator', role: 'Teacher (Admin)', avatar: '🎓', password: 'varshith-1818' },
   { id: 'alice', username: 'alice', name: 'Alice Smith', role: 'Student', avatar: '👩‍💻', password: 'alice123' },
   { id: 'bob', username: 'bob', name: 'Bob Jones', role: 'Student', avatar: '👨‍💻', password: 'bob123' }
 ];
@@ -22,18 +22,18 @@ const db = {
     }
   },
 
-  // Initialize Database
+  // Initialize Database (Using v4 keys to clear any cached data from previous builds)
   init() {
     if (!this.isLocalStorageAvailable()) {
-      console.warn("Local storage is disabled or blocked in this browser context (possibly due to direct file:// access in incognito mode). Edits will not persist across refreshes.");
+      console.warn("Local storage is disabled or blocked in this browser context. Edits will not persist.");
     }
     
     // Seed localStorage fallbacks if they don't exist
-    if (!localStorage.getItem('dcd_users_v3')) {
-      localStorage.setItem('dcd_users_v3', JSON.stringify(SEED_USERS));
+    if (!localStorage.getItem('dcd_users_v4')) {
+      localStorage.setItem('dcd_users_v4', JSON.stringify(SEED_USERS));
     }
-    if (!localStorage.getItem('dcd_projects_v3')) {
-      localStorage.setItem('dcd_projects_v3', JSON.stringify(SEED_PROJECTS));
+    if (!localStorage.getItem('dcd_projects_v4')) {
+      localStorage.setItem('dcd_projects_v4', JSON.stringify(SEED_PROJECTS));
     }
   },
 
@@ -96,7 +96,7 @@ const db = {
     }
     
     // 3. Local Storage Fallback
-    return JSON.parse(localStorage.getItem('dcd_users_v3')) || SEED_USERS;
+    return JSON.parse(localStorage.getItem('dcd_users_v4')) || SEED_USERS;
   },
 
   // Get Projects (Async)
@@ -127,12 +127,12 @@ const db = {
     }
 
     // 3. Local Storage Fallback
-    return JSON.parse(localStorage.getItem('dcd_projects_v3')) || SEED_PROJECTS;
+    return JSON.parse(localStorage.getItem('dcd_projects_v4')) || SEED_PROJECTS;
   },
 
   // Save all projects locally (helper for fallback mode)
   saveProjectsLocally(projects) {
-    localStorage.setItem('dcd_projects_v3', JSON.stringify(projects));
+    localStorage.setItem('dcd_projects_v4', JSON.stringify(projects));
   },
 
   // Get a single project (Async)
@@ -223,7 +223,7 @@ const db = {
     }
 
     if (!this.canEdit(currentUser, project)) {
-      throw new Error('Unauthorized: You must be logged in to edit projects.');
+      throw new Error('Unauthorized: You do not have permission to edit this project.');
     }
 
     const mergedProject = {
@@ -276,7 +276,7 @@ const db = {
     if (!project) return;
 
     if (!this.canEdit(currentUser, project)) {
-      throw new Error('Unauthorized: You must be logged in to delete projects.');
+      throw new Error('Unauthorized: You do not have permission to delete this project.');
     }
 
     // 1. Try MongoDB Atlas
@@ -306,6 +306,43 @@ const db = {
     const projects = await this.getProjects();
     const filtered = projects.filter(p => p.id !== id);
     this.saveProjectsLocally(filtered);
+  },
+
+  // Wipe all projects (Admin Only) (Async)
+  async wipeAllProjects() {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser || (currentUser.role !== 'Teacher (Admin)' && currentUser.username !== 'admin1818')) {
+      throw new Error('Unauthorized: Only administrators can wipe projects.');
+    }
+
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        await mongo.collection('projects').deleteMany({});
+        return;
+      } catch (err) {
+        console.error("Error wiping projects in MongoDB Atlas: ", err);
+        throw new Error("Failed to wipe projects from MongoDB cloud.");
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
+      try {
+        const snapshot = await window.DcdFirebase.db.collection('projects').get();
+        const batch = window.DcdFirebase.db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        return;
+      } catch (err) {
+        console.error("Error wiping Firebase projects: ", err);
+        throw new Error("Failed to wipe projects from Firebase cloud.");
+      }
+    }
+
+    // 3. Local Storage Fallback
+    this.saveProjectsLocally([]);
   },
 
   // Reset to default seed data (Async)
@@ -351,18 +388,18 @@ const db = {
     
     // 3. Local Storage Fallback
     else {
-      localStorage.setItem('dcd_users_v3', JSON.stringify(SEED_USERS));
-      localStorage.setItem('dcd_projects_v3', JSON.stringify(SEED_PROJECTS));
+      localStorage.setItem('dcd_users_v4', JSON.stringify(SEED_USERS));
+      localStorage.setItem('dcd_projects_v4', JSON.stringify(SEED_PROJECTS));
     }
     
-    localStorage.removeItem('dcd_session_v3');
+    localStorage.removeItem('dcd_session_v4');
     location.reload();
   },
 
   // Authentication Logic
   getCurrentUser() {
     this.init();
-    const session = localStorage.getItem('dcd_session_v3');
+    const session = localStorage.getItem('dcd_session_v4');
     return session ? JSON.parse(session) : null;
   },
 
@@ -387,7 +424,7 @@ const db = {
           avatar: user.avatar
         };
 
-        localStorage.setItem('dcd_session_v3', JSON.stringify(sessionUser));
+        localStorage.setItem('dcd_session_v4', JSON.stringify(sessionUser));
         window.dispatchEvent(new Event('storage'));
         return sessionUser;
       } catch (err) {
@@ -416,7 +453,7 @@ const db = {
           avatar: user.avatar
         };
 
-        localStorage.setItem('dcd_session_v3', JSON.stringify(sessionUser));
+        localStorage.setItem('dcd_session_v4', JSON.stringify(sessionUser));
         window.dispatchEvent(new Event('storage'));
         return sessionUser;
       } catch (err) {
@@ -441,13 +478,13 @@ const db = {
       avatar: user.avatar
     };
 
-    localStorage.setItem('dcd_session_v3', JSON.stringify(sessionUser));
+    localStorage.setItem('dcd_session_v4', JSON.stringify(sessionUser));
     window.dispatchEvent(new Event('storage'));
     return sessionUser;
   },
 
   logout() {
-    localStorage.removeItem('dcd_session_v3');
+    localStorage.removeItem('dcd_session_v4');
     window.dispatchEvent(new Event('storage'));
   },
 
@@ -455,6 +492,10 @@ const db = {
     this.init();
     const normUsername = username.toLowerCase().trim();
     const normName = name.trim().toLowerCase();
+
+    if (normUsername === 'admin1818') {
+      throw new Error('This username is reserved for system administration.');
+    }
 
     if (!normUsername || !name || !password) {
       throw new Error('All fields are required.');
@@ -507,13 +548,19 @@ const db = {
 
     // 3. Fallback Local Storage
     users.push(newUser);
-    localStorage.setItem('dcd_users_v3', JSON.stringify(users));
+    localStorage.setItem('dcd_users_v4', JSON.stringify(users));
 
     return this.login(normUsername, password);
   },
 
   canEdit(user, project) {
-    return !!user;
+    if (!user) return false;
+    // Admins can edit/delete any design module
+    if (user.role === 'Teacher (Admin)' || user.username === 'admin1818') {
+      return true;
+    }
+    // Students can only edit/delete their own modules
+    return project.creatorId === user.id;
   }
 };
 
