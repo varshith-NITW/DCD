@@ -144,6 +144,84 @@
     </div>
   </div>
 
+  <!-- Project Details Modal -->
+  <div class="modal-overlay" id="detailsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Design Specifications</h3>
+        <button class="modal-close" onclick="closeDetailsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: left;">
+        <img id="detailModalImage" src="" alt="Design Image" style="width: 100%; height: 220px; object-fit: cover; border-radius: var(--border-radius-sm); margin-bottom: 1.25rem; border: 1px solid var(--border-color); display: none;" onerror="this.style.display='none'">
+        
+        <div class="detail-tags" id="detailModalTags" style="margin-bottom: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <!-- Tags populated dynamically -->
+        </div>
+        
+        <h2 id="detailModalTitle" style="font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--text-primary);">Design Title</h2>
+        
+        <div class="detail-meta-row" style="display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+          <span>Created by: <strong id="detailModalCreator">Alice</strong></span>
+          <span>•</span>
+          <span>Date: <span id="detailModalDate">July 2026</span></span>
+        </div>
+        
+        <div id="detailModalBody" style="line-height: 1.7; color: var(--text-secondary); margin-bottom: 2rem; max-height: 250px; overflow-y: auto; padding-right: 0.5rem;">
+          <!-- Body text paragraphs -->
+        </div>
+        
+        <div class="detail-footer-actions" style="display: flex; gap: 1rem; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 1.25rem; justify-content: flex-end;">
+          <button class="btn btn-secondary" id="detailVisitBtn" onclick="handleVisitDetailLink()">🌐 Open Code/GitHub</button>
+          <button class="btn btn-primary" id="detailEditBtn" onclick="openEditModalFromDetails()">✏️ Edit Details</button>
+          <button class="btn btn-danger" id="detailDeleteBtn" onclick="handleDeleteFromDetails()">🗑️ Delete Design</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Project Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Verilog Design Details</h3>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editProjectForm" onsubmit="handleUpdateProject(event)">
+          <div class="form-group">
+            <label class="form-label" for="editTitle">Design Module Title *</label>
+            <input type="text" id="editTitle" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editShortDesc">Short Summary *</label>
+            <input type="text" id="editShortDesc" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editDesc">Detailed Verilog Specifications</label>
+            <textarea id="editDesc" class="form-textarea"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editTags">Design Tags (Comma-separated)</label>
+            <input type="text" id="editTags" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editImage">Design Cover / Diagram URL</label>
+            <input type="url" id="editImage" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editLink">GitHub Code / Diagram Link</label>
+            <input type="url" id="editLink" class="form-input">
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer -->
   <footer>
     <p>&copy; 2026 DCD - Digital Circuit Design Showcase. Built for ECE students and faculty.</p>
@@ -155,6 +233,7 @@
   <!-- Script Logic -->
   <script>
     let isRegisterMode = false;
+    let activeProjectId = '';
 
     // Initialize Page
     document.addEventListener('DOMContentLoaded', () => {
@@ -168,13 +247,27 @@
       window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           closeAddModal();
+          closeDetailsModal();
+          closeEditModal();
         }
       });
       
-      // Close modal when clicking outside contents
+      // Close modals when clicking outside contents
       document.getElementById('addModal').addEventListener('click', (e) => {
         if (e.target === document.getElementById('addModal')) {
           closeAddModal();
+        }
+      });
+
+      document.getElementById('detailsModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('detailsModal')) {
+          closeDetailsModal();
+        }
+      });
+
+      document.getElementById('editModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('editModal')) {
+          closeEditModal();
         }
       });
 
@@ -313,7 +406,7 @@
       projects.forEach(p => {
         const card = document.createElement('div');
         card.className = 'project-card';
-        card.onclick = () => window.open(`project.html?id=${p.id}`, '_blank');
+        card.onclick = () => openDetailsModal(p.id);
 
         card.innerHTML = `
           <div class="project-image-wrapper">
@@ -339,18 +432,166 @@
       });
     }
 
-    // Modal Control
+    // Modal Control: Add
     function openAddModal() {
       document.getElementById('addModal').classList.add('active');
       document.getElementById('projTitle').focus();
     }
 
+    // Close Add Modal
     function closeAddModal() {
       document.getElementById('addModal').classList.remove('active');
       document.getElementById('addProjectForm').reset();
     }
 
-    // Form Submission
+    // Modal Control: Details
+    function openDetailsModal(projectId) {
+      activeProjectId = projectId;
+      const project = ProjectDb.getProject(projectId);
+      if (!project) return;
+
+      const titleEl = document.getElementById('detailModalTitle');
+      const imgEl = document.getElementById('detailModalImage');
+      const tagsEl = document.getElementById('detailModalTags');
+      const creatorEl = document.getElementById('detailModalCreator');
+      const dateEl = document.getElementById('detailModalDate');
+      const bodyEl = document.getElementById('detailModalBody');
+      const visitBtn = document.getElementById('detailVisitBtn');
+
+      titleEl.innerText = project.title;
+      
+      if (project.imageUrl) {
+        imgEl.src = project.imageUrl;
+        imgEl.style.display = 'block';
+      } else {
+        imgEl.style.display = 'none';
+      }
+
+      // Populate tags
+      tagsEl.innerHTML = '';
+      if (project.tags && project.tags.length > 0) {
+        project.tags.forEach(tag => {
+          const badge = document.createElement('span');
+          badge.className = 'project-card-tag';
+          badge.innerText = tag;
+          tagsEl.appendChild(badge);
+        });
+      }
+
+      creatorEl.innerText = project.creatorName;
+
+      const createdDate = new Date(project.createdAt);
+      dateEl.innerText = createdDate.toLocaleDateString(undefined, { 
+        year: 'numeric', month: 'long', day: 'numeric' 
+      });
+
+      // Body text splits paragraphs
+      bodyEl.innerHTML = '';
+      if (project.description) {
+        const paragraphs = project.description.split('\n\n');
+        paragraphs.forEach(pText => {
+          if (pText.trim()) {
+            const p = document.createElement('p');
+            p.style.marginBottom = '1rem';
+            p.innerText = pText.trim();
+            bodyEl.appendChild(p);
+          }
+        });
+      } else {
+        const p = document.createElement('p');
+        p.style.fontStyle = 'italic';
+        p.innerText = project.shortDescription;
+        bodyEl.appendChild(p);
+      }
+
+      // Live link
+      if (project.externalLink) {
+        visitBtn.style.display = 'inline-flex';
+      } else {
+        visitBtn.style.display = 'none';
+      }
+
+      // Show details modal
+      document.getElementById('detailsModal').classList.add('active');
+    }
+
+    function closeDetailsModal() {
+      document.getElementById('detailsModal').classList.remove('active');
+    }
+
+    // Modal Control: Edit
+    function openEditModalFromDetails() {
+      const project = ProjectDb.getProject(activeProjectId);
+      if (!project) return;
+
+      document.getElementById('editTitle').value = project.title;
+      document.getElementById('editShortDesc').value = project.shortDescription;
+      document.getElementById('editDesc').value = project.description || '';
+      document.getElementById('editTags').value = project.tags ? project.tags.join(', ') : '';
+      document.getElementById('editImage').value = project.imageUrl || '';
+      document.getElementById('editLink').value = project.externalLink || '';
+
+      closeDetailsModal();
+      document.getElementById('editModal').classList.add('active');
+      document.getElementById('editTitle').focus();
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('active');
+    }
+
+    // Handlers
+    function handleUpdateProject(event) {
+      event.preventDefault();
+
+      const title = document.getElementById('editTitle').value.trim();
+      const shortDescription = document.getElementById('editShortDesc').value.trim();
+      const description = document.getElementById('editDesc').value.trim();
+      const tagsInput = document.getElementById('editTags').value.trim();
+      const imageUrl = document.getElementById('editImage').value.trim();
+      const externalLink = document.getElementById('editLink').value.trim();
+
+      const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t !== '') : [];
+
+      try {
+        ProjectDb.updateProject(activeProjectId, {
+          title,
+          shortDescription,
+          description,
+          tags,
+          imageUrl,
+          externalLink
+        });
+        
+        closeEditModal();
+        renderProjects();
+        // Open details back to review changes
+        openDetailsModal(activeProjectId);
+      } catch (err) {
+        alert('Failed to edit: ' + err.message);
+      }
+    }
+
+    function handleDeleteFromDetails() {
+      if (confirm('Are you sure you want to permanently delete this design block? This action cannot be undone.')) {
+        try {
+          ProjectDb.deleteProject(activeProjectId);
+          closeDetailsModal();
+          renderProjects();
+        } catch (err) {
+          alert('Failed to delete: ' + err.message);
+        }
+      }
+    }
+
+    function handleVisitDetailLink() {
+      const project = ProjectDb.getProject(activeProjectId);
+      if (project && project.externalLink) {
+        window.open(project.externalLink, '_blank');
+      }
+    }
+
+    // Form Submission: Add Project
     function handleCreateProject(event) {
       event.preventDefault();
       
