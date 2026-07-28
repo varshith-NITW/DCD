@@ -1,4 +1,4 @@
-// Simulated & Cloud Database Engine for Classroom DCD Hub with Authorization
+// Simulated, Firebase, & MongoDB Atlas Database Engine for Classroom DCD Hub with Authorization
 
 const SEED_USERS = [
   { id: 'teacher', username: 'teacher', name: 'Dr. Sarah Jenkins', role: 'Teacher (Admin)', avatar: '🎓', password: 'teacher123' },
@@ -37,20 +37,52 @@ const db = {
     }
   },
 
-  // Check if Firestore should be used
-  isCloud() {
+  // Check if MongoDB Atlas should be used
+  isMongo() {
+    return window.DcdMongo && window.DcdMongo.useMongo && window.DcdMongo.app;
+  },
+
+  // Check if Firebase should be used
+  isFirebase() {
     return window.DcdFirebase && window.DcdFirebase.useFirebase && window.DcdFirebase.db;
+  },
+
+  // Get MongoDB Database Instance (authenticated anonymously)
+  async getMongoDb() {
+    const app = window.DcdMongo.app;
+    if (!app.currentUser) {
+      await app.logIn(Realm.Credentials.anonymous());
+    }
+    return app.currentUser.mongoClient("mongodb-atlas").db("dcd_showcase");
   },
 
   // Get User List (Async)
   async getUsers() {
     this.init();
-    if (this.isCloud()) {
+    
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        const users = await mongo.collection('users').find({});
+        if (users.length === 0) {
+          for (const u of SEED_USERS) {
+            await mongo.collection('users').insertOne(u);
+          }
+          return SEED_USERS;
+        }
+        return users;
+      } catch (err) {
+        console.error("Error fetching users from MongoDB Atlas: ", err);
+      }
+    }
+    
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
       try {
         const snapshot = await window.DcdFirebase.db.collection('users').get();
         const users = [];
         snapshot.forEach(doc => users.push(doc.data()));
-        // If Firestore users collection is empty (e.g. fresh database), seed it
         if (users.length === 0) {
           for (const u of SEED_USERS) {
             await window.DcdFirebase.db.collection('users').doc(u.username).set(u);
@@ -59,27 +91,42 @@ const db = {
         }
         return users;
       } catch (err) {
-        console.error("Error fetching users from cloud: ", err);
+        console.error("Error fetching users from Firebase: ", err);
       }
     }
-    // Fallback to local storage
+    
+    // 3. Local Storage Fallback
     return JSON.parse(localStorage.getItem('dcd_users_v3')) || SEED_USERS;
   },
 
   // Get Projects (Async)
   async getProjects() {
     this.init();
-    if (this.isCloud()) {
+    
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        const projects = await mongo.collection('projects').find({});
+        return projects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      } catch (err) {
+        console.error("Error fetching projects from MongoDB Atlas: ", err);
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
       try {
         const snapshot = await window.DcdFirebase.db.collection('projects').orderBy('createdAt', 'desc').get();
         const projects = [];
         snapshot.forEach(doc => projects.push(doc.data()));
         return projects;
       } catch (err) {
-        console.error("Error fetching projects from cloud: ", err);
+        console.error("Error fetching projects from Firebase: ", err);
       }
     }
-    // Fallback to local storage
+
+    // 3. Local Storage Fallback
     return JSON.parse(localStorage.getItem('dcd_projects_v3')) || SEED_PROJECTS;
   },
 
@@ -90,14 +137,27 @@ const db = {
 
   // Get a single project (Async)
   async getProject(id) {
-    if (this.isCloud()) {
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        return await mongo.collection('projects').findOne({ id: id });
+      } catch (err) {
+        console.error("Error fetching project from MongoDB Atlas: ", err);
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
       try {
         const doc = await window.DcdFirebase.db.collection('projects').doc(id).get();
         return doc.exists ? doc.data() : null;
       } catch (err) {
-        console.error("Error fetching project from cloud: ", err);
+        console.error("Error fetching project from Firebase: ", err);
       }
     }
+
+    // 3. Local Storage Fallback
     const projects = await this.getProjects();
     return projects.find(p => p.id === id);
   },
@@ -119,21 +179,34 @@ const db = {
       creatorName: currentUser.name,
       createdAt: new Date().toISOString(),
       tags: projectData.tags || [],
-      imageUrl: projectData.imageUrl || 'https://images.unsplash.com/photo-1601662528567-526cd06f6582?auto=format&fit=crop&w=800&q=80',
+      imageUrl: projectData.imageUrl || '',
       externalLink: projectData.externalLink || ''
     };
 
-    if (this.isCloud()) {
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        await mongo.collection('projects').insertOne(newProject);
+        return newProject;
+      } catch (err) {
+        console.error("Error creating project in MongoDB Atlas: ", err);
+        throw new Error("Failed to save project to MongoDB cloud.");
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
       try {
         await window.DcdFirebase.db.collection('projects').doc(newProjectId).set(newProject);
         return newProject;
       } catch (err) {
-        console.error("Error creating cloud project: ", err);
-        throw new Error("Failed to save project to the cloud. Try again.");
+        console.error("Error creating Firebase project: ", err);
+        throw new Error("Failed to save project to Firebase cloud.");
       }
     }
 
-    // Fallback
+    // 3. Local Storage Fallback
     const projects = await this.getProjects();
     projects.unshift(newProject);
     this.saveProjectsLocally(projects);
@@ -163,17 +236,30 @@ const db = {
       externalLink: updatedData.externalLink !== undefined ? updatedData.externalLink : project.externalLink
     };
 
-    if (this.isCloud()) {
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        await mongo.collection('projects').updateOne({ id: id }, { $set: mergedProject });
+        return mergedProject;
+      } catch (err) {
+        console.error("Error updating project in MongoDB Atlas: ", err);
+        throw new Error("Failed to edit project in MongoDB cloud.");
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
       try {
         await window.DcdFirebase.db.collection('projects').doc(id).update(mergedProject);
         return mergedProject;
       } catch (err) {
-        console.error("Error updating cloud project: ", err);
-        throw new Error("Failed to edit project in the cloud.");
+        console.error("Error updating Firebase project: ", err);
+        throw new Error("Failed to edit project in Firebase cloud.");
       }
     }
 
-    // Fallback
+    // 3. Local Storage Fallback
     const projects = await this.getProjects();
     const index = projects.findIndex(p => p.id === id);
     if (index !== -1) {
@@ -193,17 +279,30 @@ const db = {
       throw new Error('Unauthorized: You must be logged in to delete projects.');
     }
 
-    if (this.isCloud()) {
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        await mongo.collection('projects').deleteOne({ id: id });
+        return;
+      } catch (err) {
+        console.error("Error deleting project in MongoDB Atlas: ", err);
+        throw new Error("Failed to delete project from MongoDB cloud.");
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
       try {
         await window.DcdFirebase.db.collection('projects').doc(id).delete();
         return;
       } catch (err) {
-        console.error("Error deleting cloud project: ", err);
-        throw new Error("Failed to delete project from the cloud.");
+        console.error("Error deleting Firebase project: ", err);
+        throw new Error("Failed to delete project from Firebase cloud.");
       }
     }
 
-    // Fallback
+    // 3. Local Storage Fallback
     const projects = await this.getProjects();
     const filtered = projects.filter(p => p.id !== id);
     this.saveProjectsLocally(filtered);
@@ -211,15 +310,31 @@ const db = {
 
   // Reset to default seed data (Async)
   async resetDatabase() {
-    if (this.isCloud()) {
-      if (confirm("Resetting database will clear all cloud projects. Are you sure?")) {
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      if (confirm("Resetting MongoDB database will clear all cloud projects. Are you sure?")) {
+        try {
+          const mongo = await this.getMongoDb();
+          await mongo.collection('projects').deleteMany({});
+          await mongo.collection('users').deleteMany({});
+          for (const u of SEED_USERS) {
+            await mongo.collection('users').insertOne(u);
+          }
+        } catch (err) {
+          console.error("Error resetting MongoDB database: ", err);
+        }
+      }
+    }
+    
+    // 2. Try Firebase Firestore
+    else if (this.isFirebase()) {
+      if (confirm("Resetting Firebase database will clear all cloud projects. Are you sure?")) {
         try {
           const snapshot = await window.DcdFirebase.db.collection('projects').get();
           const batch = window.DcdFirebase.db.batch();
           snapshot.forEach(doc => batch.delete(doc.ref));
           await batch.commit();
 
-          // Reset users collection to default seed users
           const userSnapshot = await window.DcdFirebase.db.collection('users').get();
           const userBatch = window.DcdFirebase.db.batch();
           userSnapshot.forEach(doc => userBatch.delete(doc.ref));
@@ -229,13 +344,17 @@ const db = {
             await window.DcdFirebase.db.collection('users').doc(u.username).set(u);
           }
         } catch (err) {
-          console.error("Error resetting cloud database: ", err);
+          console.error("Error resetting Firebase cloud database: ", err);
         }
       }
-    } else {
+    }
+    
+    // 3. Local Storage Fallback
+    else {
       localStorage.setItem('dcd_users_v3', JSON.stringify(SEED_USERS));
       localStorage.setItem('dcd_projects_v3', JSON.stringify(SEED_PROJECTS));
     }
+    
     localStorage.removeItem('dcd_session_v3');
     location.reload();
   },
@@ -251,7 +370,34 @@ const db = {
     this.init();
     const normUsername = username.toLowerCase().trim();
     
-    if (this.isCloud()) {
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        const user = await mongo.collection('users').findOne({ username: normUsername });
+        if (!user || user.password !== password) {
+          throw new Error('Invalid username or password.');
+        }
+        
+        const sessionUser = {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.role,
+          avatar: user.avatar
+        };
+
+        localStorage.setItem('dcd_session_v3', JSON.stringify(sessionUser));
+        window.dispatchEvent(new Event('storage'));
+        return sessionUser;
+      } catch (err) {
+        console.error("MongoDB login error: ", err);
+        throw err;
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
       try {
         const doc = await window.DcdFirebase.db.collection('users').doc(normUsername).get();
         if (!doc.exists) {
@@ -279,7 +425,7 @@ const db = {
       }
     }
 
-    // Fallback login
+    // 3. Fallback login
     const users = await this.getUsers();
     const user = users.find(u => u.username.toLowerCase() === normUsername);
     
@@ -336,7 +482,20 @@ const db = {
       password: password
     };
 
-    if (this.isCloud()) {
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        await mongo.collection('users').insertOne(newUser);
+        return this.login(normUsername, password);
+      } catch (err) {
+        console.error("MongoDB Atlas registration error: ", err);
+        throw new Error("MongoDB cloud registration failed. Try again.");
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
       try {
         await window.DcdFirebase.db.collection('users').doc(normUsername).set(newUser);
         return this.login(normUsername, password);
@@ -346,7 +505,7 @@ const db = {
       }
     }
 
-    // Fallback
+    // 3. Fallback Local Storage
     users.push(newUser);
     localStorage.setItem('dcd_users_v3', JSON.stringify(users));
 
