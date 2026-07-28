@@ -686,6 +686,7 @@
 
       try {
         const users = await ProjectDb.getUsers();
+        const currentUser = ProjectDb.getCurrentUser();
         userListEl.innerHTML = '';
         
         if (users.length === 0) {
@@ -701,6 +702,11 @@
           item.style.padding = '0.75rem 1rem';
           item.style.borderBottom = '1px solid var(--border-color)';
           
+          let actionHtml = '';
+          if (u.username !== 'admin1818' && (!currentUser || u.username !== currentUser.username)) {
+            actionHtml = `<button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: none; background: var(--danger);" onclick="handleRemoveUser('${u.username}')">Remove</button>`;
+          }
+
           item.innerHTML = `
             <div style="display: flex; align-items: center; gap: 0.75rem;">
               <span style="font-size: 1.25rem;">${u.avatar || '👤'}</span>
@@ -709,9 +715,12 @@
                 <div style="font-size: 0.75rem; color: var(--text-muted);">@${u.username}</div>
               </div>
             </div>
-            <span style="font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; background: ${u.role.includes('Admin') ? 'var(--accent-primary-glow)' : 'rgba(255, 255, 255, 0.05)'}; color: ${u.role.includes('Admin') ? 'var(--accent-primary)' : 'var(--text-secondary)'}; border: 1px solid ${u.role.includes('Admin') ? 'var(--accent-primary)' : 'var(--border-color)'};">
-              ${u.role}
-            </span>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; background: ${u.role.includes('Admin') ? 'var(--accent-primary-glow)' : 'rgba(255, 255, 255, 0.05)'}; color: ${u.role.includes('Admin') ? 'var(--accent-primary)' : 'var(--text-secondary)'}; border: 1px solid ${u.role.includes('Admin') ? 'var(--accent-primary)' : 'var(--border-color)'};">
+                ${u.role}
+              </span>
+              ${actionHtml}
+            </div>
           `;
           userListEl.appendChild(item);
         });
@@ -741,6 +750,18 @@
       if (confirm('⚠️ WARNING: This will reset the database and log you out. Proceed?')) {
         try {
           await ProjectDb.resetDatabase();
+        } catch (err) {
+          alert('Operation failed: ' + err.message);
+        }
+      }
+    }
+
+    async function handleRemoveUser(username) {
+      if (confirm(`Are you sure you want to permanently remove classmate @${username}?`)) {
+        try {
+          await ProjectDb.deleteUser(username);
+          alert(`Classmate @${username} has been removed.`);
+          await openAdminModal(); // Refresh user list
         } catch (err) {
           alert('Operation failed: ' + err.message);
         }

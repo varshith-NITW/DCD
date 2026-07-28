@@ -573,6 +573,47 @@ const db = {
     return this.login(normUsername, password);
   },
 
+  // Delete a user (Admin Only) (Async)
+  async deleteUser(username) {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser || (currentUser.role !== 'Teacher (Admin)' && currentUser.username !== 'admin1818')) {
+      throw new Error('Unauthorized: Only administrators can remove users.');
+    }
+
+    const normUsername = username.toLowerCase().trim();
+    if (normUsername === 'admin1818') {
+      throw new Error('Unauthorized: You cannot remove the system administrator account.');
+    }
+
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        await mongo.collection('users').deleteOne({ username: normUsername });
+        return;
+      } catch (err) {
+        console.error("Error deleting user in MongoDB Atlas: ", err);
+        throw new Error("Failed to delete user from MongoDB cloud.");
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
+      try {
+        await window.DcdFirebase.db.collection('users').doc(normUsername).delete();
+        return;
+      } catch (err) {
+        console.error("Error deleting Firebase user: ", err);
+        throw new Error("Failed to delete user from Firebase cloud.");
+      }
+    }
+
+    // 3. Local Storage Fallback
+    const users = await this.getUsers();
+    const filtered = users.filter(u => u.username.toLowerCase() !== normUsername);
+    localStorage.setItem('dcd_users_v4', JSON.stringify(filtered));
+  },
+
   canEdit(user, project) {
     if (!user) return false;
     // Admins can edit/delete any design module
