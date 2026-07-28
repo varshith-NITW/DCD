@@ -1,35 +1,30 @@
 // Firebase Web SDK Configuration for DCD Showcase Hub
-// To activate the cloud database, paste your web app configuration credentials from the Firebase Console below.
+// Activated using your web app configuration credentials.
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCrOg8zC0pALmnhcRX5q-egz5235XYUn0Q",
+  authDomain: "dcd-showcase.firebaseapp.com",
+  projectId: "dcd-showcase",
+  storageBucket: "dcd-showcase.firebasestorage.app",
+  messagingSenderId: "1056285964314",
+  appId: "1:1056285964314:web:bdb94c1756d34f786bb9a3"
 };
 
 let useFirebase = false;
 let dbInstance = null;
 
-// Initialize Firebase if configuration is completed
-if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
-  try {
-    // Check if the firebase scripts are loaded
-    if (typeof firebase !== 'undefined') {
-      firebase.initializeApp(firebaseConfig);
-      dbInstance = firebase.firestore();
-      useFirebase = true;
-      console.log("⚡ DCD Cloud: Firebase Firestore initialized successfully!");
-    } else {
-      console.error("⚡ DCD Cloud: Firebase scripts not loaded. Check script tag imports.");
-    }
-  } catch (error) {
-    console.error("⚡ DCD Cloud: Firebase initialization error:", error);
+try {
+  // Check if the firebase scripts are loaded
+  if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    dbInstance = firebase.firestore();
+    useFirebase = true;
+    console.log("⚡ DCD Cloud: Firebase Firestore initialized successfully!");
+  } else {
+    console.error("⚡ DCD Cloud: Firebase scripts not loaded. Check script tag imports.");
   }
-} else {
-  console.log("⚡ DCD Local: Running in local storage fallback mode. Paste your Firebase credentials in firebase-config.js to enable cloud syncing.");
+} catch (error) {
+  console.error("⚡ DCD Cloud: Firebase initialization error:", error);
 }
 
 // Export config context globally for db.js
