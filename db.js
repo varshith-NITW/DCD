@@ -1,7 +1,7 @@
 // Simulated, Firebase, & MongoDB Atlas Database Engine for Classroom DCD Hub with Authorization
 
 const SEED_USERS = [
-  { id: 'admin1818', username: 'admin1818', name: 'DCD Administrator', role: 'Teacher (Admin)', avatar: '🎓', password: 'varshith-1818' },
+  { id: 'admin1818', username: 'admin1818', name: 'DCD Administrator', role: 'Teacher (Admin)', avatar: '🎓', password: 'admin-1818' },
   { id: 'alice', username: 'alice', name: 'Alice Smith', role: 'Student', avatar: '👩‍💻', password: 'alice123' },
   { id: 'bob', username: 'bob', name: 'Bob Jones', role: 'Student', avatar: '👨‍💻', password: 'bob123' }
 ];
