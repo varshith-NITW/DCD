@@ -1,9 +1,9 @@
 // Simulated, Firebase, & MongoDB Atlas Database Engine for Classroom DCD Hub with Authorization
 
 const SEED_USERS = [
-  { id: 'admin1818', username: 'admin1818', name: 'DCD Administrator', role: 'Teacher (Admin)', avatar: '🎓', password: 'admin-1818' },
-  { id: 'alice', username: 'alice', name: 'Alice Smith', role: 'Student', avatar: '👩‍💻', password: 'alice123' },
-  { id: 'bob', username: 'bob', name: 'Bob Jones', role: 'Student', avatar: '👨‍💻', password: 'bob123' }
+  { id: 'admin1818', username: 'admin1818@nitw.ac.in', name: 'DCD Administrator', role: 'Teacher (Admin)', avatar: '🎓', password: 'admin-1818' },
+  { id: 'alice', username: 'alice@student.nitw.ac.in', name: 'Alice Smith', role: 'Student', avatar: '👩‍💻', password: 'alice123' },
+  { id: 'bob', username: 'bob@student.nitw.ac.in', name: 'Bob Jones', role: 'Student', avatar: '👨‍💻', password: 'bob123' }
 ];
 
 // Seed projects is empty by default so the interface starts completely clean
@@ -399,7 +399,14 @@ const db = {
 
   async login(username, password) {
     this.init();
-    const normUsername = username.toLowerCase().trim();
+    let normUsername = username.toLowerCase().trim();
+    if (!normUsername.includes('@')) {
+      if (normUsername === 'admin1818') {
+        normUsername += '@nitw.ac.in';
+      } else {
+        normUsername += '@student.nitw.ac.in';
+      }
+    }
     
     // 1. Try MongoDB Atlas
     if (this.isMongo()) {
@@ -507,19 +514,26 @@ const db = {
     const normUsername = username.toLowerCase().trim();
     const normName = name.trim().toLowerCase();
 
-    if (normUsername === 'admin1818') {
-      throw new Error('This username is reserved for system administration.');
-    }
-
     if (!normUsername || !name || !password) {
       throw new Error('All fields are required.');
     }
 
+    // Validate college email domain restriction
+    const allowedDomains = ['@student.nitw.ac.in', '@nitw.ac.in'];
+    const isCollegeEmail = allowedDomains.some(domain => normUsername.endsWith(domain));
+    if (!isCollegeEmail) {
+      throw new Error('Registration is restricted to college emails only (@student.nitw.ac.in or @nitw.ac.in).');
+    }
+
+    if (normUsername === 'admin1818@nitw.ac.in') {
+      throw new Error('This email is reserved for system administration.');
+    }
+
     const users = await this.getUsers();
 
-    // STRICT UNIQUE CHECKS: No duplicate usernames or duplicate display names allowed
+    // STRICT UNIQUE CHECKS: No duplicate emails or duplicate display names allowed
     if (users.some(u => u.username.toLowerCase() === normUsername)) {
-      throw new Error('Username is already taken. Please choose a unique username.');
+      throw new Error('This email is already registered. Please log in.');
     }
     if (users.some(u => u.name.toLowerCase() === normName)) {
       throw new Error('This display name is already in use by another classmate. Please use your unique name.');
