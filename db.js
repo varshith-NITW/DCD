@@ -177,7 +177,9 @@ const db = {
       description: projectData.description || '',
       creatorId: currentUser.id,
       creatorName: currentUser.name,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      status: projectData.status || 'Under Review',
+      declinedReason: projectData.declinedReason || ''
     };
 
     // 1. Try MongoDB Atlas
@@ -227,7 +229,9 @@ const db = {
       ...project,
       title: updatedData.title !== undefined ? updatedData.title : project.title,
       shortDescription: updatedData.shortDescription !== undefined ? updatedData.shortDescription : project.shortDescription,
-      description: updatedData.description !== undefined ? updatedData.description : project.description
+      description: updatedData.description !== undefined ? updatedData.description : project.description,
+      status: updatedData.status !== undefined ? updatedData.status : (project.status || 'Under Review'),
+      declinedReason: updatedData.status === 'Declined' ? (updatedData.declinedReason !== undefined ? updatedData.declinedReason : project.declinedReason) : ''
     };
 
     // 1. Try MongoDB Atlas
