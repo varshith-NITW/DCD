@@ -177,10 +177,7 @@ const db = {
       description: projectData.description || '',
       creatorId: currentUser.id,
       creatorName: currentUser.name,
-      createdAt: new Date().toISOString(),
-      tags: projectData.tags || [],
-      imageUrl: projectData.imageUrl || '',
-      externalLink: projectData.externalLink || ''
+      createdAt: new Date().toISOString()
     };
 
     // 1. Try MongoDB Atlas
@@ -230,10 +227,7 @@ const db = {
       ...project,
       title: updatedData.title !== undefined ? updatedData.title : project.title,
       shortDescription: updatedData.shortDescription !== undefined ? updatedData.shortDescription : project.shortDescription,
-      description: updatedData.description !== undefined ? updatedData.description : project.description,
-      tags: updatedData.tags !== undefined ? updatedData.tags : project.tags,
-      imageUrl: updatedData.imageUrl !== undefined ? updatedData.imageUrl : project.imageUrl,
-      externalLink: updatedData.externalLink !== undefined ? updatedData.externalLink : project.externalLink
+      description: updatedData.description !== undefined ? updatedData.description : project.description
     };
 
     // 1. Try MongoDB Atlas

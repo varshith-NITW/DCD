@@ -132,18 +132,6 @@
             <label class="form-label" for="projDesc">Detailed Verilog Specifications</label>
             <textarea id="projDesc" class="form-textarea" placeholder="Describe the block logic, inputs, outputs, simulations, and hardware synthesis targets..."></textarea>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="projTags">Design Tags (Comma-separated)</label>
-            <input type="text" id="projTags" class="form-input" placeholder="e.g. Verilog, Hardware, FPGA">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="projImage">Design Cover / Diagram URL</label>
-            <input type="url" id="projImage" class="form-input" placeholder="https://... (Leave blank for default diagram)">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="projLink">GitHub Code / Diagram Link</label>
-            <input type="url" id="projLink" class="form-input" placeholder="https://github.com/project-code">
-          </div>
           
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
@@ -162,12 +150,6 @@
         <button class="modal-close" onclick="closeDetailsModal()">&times;</button>
       </div>
       <div class="modal-body" style="text-align: left;">
-        <img id="detailModalImage" src="" alt="Design Image" style="width: 100%; height: 220px; object-fit: cover; border-radius: var(--border-radius-sm); margin-bottom: 1.25rem; border: 1px solid var(--border-color); display: none;" onerror="this.style.display='none'">
-        
-        <div class="detail-tags" id="detailModalTags" style="margin-bottom: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-          <!-- Tags populated dynamically -->
-        </div>
-        
         <h2 id="detailModalTitle" style="font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--text-primary);">Design Title</h2>
         
         <div class="detail-meta-row" style="display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
@@ -181,7 +163,6 @@
         </div>
         
         <div class="detail-footer-actions" style="display: flex; gap: 1rem; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 1.25rem; justify-content: flex-end;">
-          <button class="btn btn-secondary" id="detailVisitBtn" onclick="handleVisitDetailLink()">🌐 Open Code/GitHub</button>
           <button class="btn btn-primary" id="detailEditBtn" onclick="openEditModalFromDetails()">✏️ Edit Details</button>
           <button class="btn btn-danger" id="detailDeleteBtn" onclick="handleDeleteFromDetails()">🗑️ Delete Design</button>
         </div>
@@ -209,18 +190,6 @@
           <div class="form-group">
             <label class="form-label" for="editDesc">Detailed Verilog Specifications</label>
             <textarea id="editDesc" class="form-textarea"></textarea>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="editTags">Design Tags (Comma-separated)</label>
-            <input type="text" id="editTags" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="editImage">Design Cover / Diagram URL</label>
-            <input type="url" id="editImage" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="editLink">GitHub Code / Diagram Link</label>
-            <input type="url" id="editLink" class="form-input">
           </div>
           
           <div class="form-actions">
@@ -266,7 +235,6 @@
   <script>
     let isRegisterMode = false;
     let activeProjectId = '';
-    const DEFAULT_CIRCUIT_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="340" height="200" viewBox="0 0 340 200"><rect width="100%" height="100%" fill="%230b0f19"/><g stroke="%23818cf8" stroke-width="1.5" opacity="0.3" fill="none"><path d="M 20,40 H 60 M 20,70 H 60 M 60,40 C 70,40 80,45 80,55 C 80,65 70,70 60,70 Z M 80,55 H 120 M 120,55 V 120 M 100,120 H 140 M 100,150 H 140 M 140,120 C 150,120 160,125 160,135 C 160,145 150,150 140,150 Z M 160,135 H 200 M 200,135 V 80 M 180,80 H 220 M 180,100 H 220 M 220,75 C 235,75 240,85 240,90 C 240,95 235,105 220,105 Z M 240,90 H 280"/><circle cx="20" cy="40" r="3" fill="%23818cf8"/><circle cx="20" cy="70" r="3" fill="%23818cf8"/><circle cx="100" cy="120" r="3" fill="%23818cf8"/><circle cx="100" cy="150" r="3" fill="%23818cf8"/><circle cx="180" cy="80" r="3" fill="%23818cf8"/><circle cx="180" cy="100" r="3" fill="%23818cf8"/><circle cx="280" cy="90" r="3" fill="%23818cf8"/></g></svg>`;
 
     // Initialize Page
     document.addEventListener('DOMContentLoaded', async () => {
@@ -457,9 +425,6 @@
         card.onclick = () => openDetailsModal(p.id);
 
         card.innerHTML = `
-          <div class="project-image-wrapper">
-            <img src="${p.imageUrl || DEFAULT_CIRCUIT_SVG}" alt="${p.title}" class="project-image" onerror="this.src=DEFAULT_CIRCUIT_SVG">
-          </div>
           <div class="project-content">
             <h3 class="project-card-title">${p.title}</h3>
             <p class="project-card-desc">${p.shortDescription}</p>
@@ -469,9 +434,6 @@
                   ${p.creatorId === 'alice' ? '👩‍💻' : p.creatorId === 'bob' ? '👨‍💻' : '👤'}
                 </div>
                 <span>${p.creatorName}</span>
-              </div>
-              <div class="project-card-tags">
-                ${p.tags.slice(0, 2).map(t => `<span class="project-card-tag">${t}</span>`).join('')}
               </div>
             </div>
           </div>
@@ -499,29 +461,12 @@
       if (!project) return;
 
       const titleEl = document.getElementById('detailModalTitle');
-      const imgEl = document.getElementById('detailModalImage');
-      const tagsEl = document.getElementById('detailModalTags');
       const creatorEl = document.getElementById('detailModalCreator');
       const dateEl = document.getElementById('detailModalDate');
       const bodyEl = document.getElementById('detailModalBody');
-      const visitBtn = document.getElementById('detailVisitBtn');
 
       titleEl.innerText = project.title;
       
-      imgEl.src = project.imageUrl || DEFAULT_CIRCUIT_SVG;
-      imgEl.style.display = 'block';
-
-      // Populate tags
-      tagsEl.innerHTML = '';
-      if (project.tags && project.tags.length > 0) {
-        project.tags.forEach(tag => {
-          const badge = document.createElement('span');
-          badge.className = 'project-card-tag';
-          badge.innerText = tag;
-          tagsEl.appendChild(badge);
-        });
-      }
-
       creatorEl.innerText = project.creatorName;
 
       const createdDate = new Date(project.createdAt);
@@ -546,13 +491,6 @@
         p.style.fontStyle = 'italic';
         p.innerText = project.shortDescription;
         bodyEl.appendChild(p);
-      }
-
-      // Live link
-      if (project.externalLink) {
-        visitBtn.style.display = 'inline-flex';
-      } else {
-        visitBtn.style.display = 'none';
       }
 
       // Hide or show action buttons depending on ownership
@@ -583,9 +521,6 @@
       document.getElementById('editTitle').value = project.title;
       document.getElementById('editShortDesc').value = project.shortDescription;
       document.getElementById('editDesc').value = project.description || '';
-      document.getElementById('editTags').value = project.tags ? project.tags.join(', ') : '';
-      document.getElementById('editImage').value = project.imageUrl || '';
-      document.getElementById('editLink').value = project.externalLink || '';
 
       closeDetailsModal();
       document.getElementById('editModal').classList.add('active');
@@ -603,20 +538,12 @@
       const title = document.getElementById('editTitle').value.trim();
       const shortDescription = document.getElementById('editShortDesc').value.trim();
       const description = document.getElementById('editDesc').value.trim();
-      const tagsInput = document.getElementById('editTags').value.trim();
-      const imageUrl = document.getElementById('editImage').value.trim();
-      const externalLink = document.getElementById('editLink').value.trim();
-
-      const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t !== '') : [];
 
       try {
         await ProjectDb.updateProject(activeProjectId, {
           title,
           shortDescription,
-          description,
-          tags,
-          imageUrl,
-          externalLink
+          description
         });
         
         closeEditModal();
@@ -640,12 +567,7 @@
       }
     }
 
-    async function handleVisitDetailLink() {
-      const project = await ProjectDb.getProject(activeProjectId);
-      if (project && project.externalLink) {
-        window.open(project.externalLink, '_blank');
-      }
-    }
+
 
     // Form Submission: Add Project (Async)
     async function handleCreateProject(event) {
@@ -654,20 +576,12 @@
       const title = document.getElementById('projTitle').value.trim();
       const shortDescription = document.getElementById('projShortDesc').value.trim();
       const description = document.getElementById('projDesc').value.trim();
-      const tagsInput = document.getElementById('projTags').value.trim();
-      const imageUrl = document.getElementById('projImage').value.trim();
-      const externalLink = document.getElementById('projLink').value.trim();
-
-      const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t !== '') : [];
 
       try {
         await ProjectDb.createProject({
           title,
           shortDescription,
-          description,
-          tags,
-          imageUrl,
-          externalLink
+          description
         });
         
         closeAddModal();
