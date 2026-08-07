@@ -18,6 +18,17 @@ try {
   if (typeof firebase !== 'undefined') {
     firebase.initializeApp(firebaseConfig);
     dbInstance = firebase.firestore();
+    
+    // Bypass ISP/Browser QUIC protocol blockages (ERR_QUIC_PROTOCOL_ERROR)
+    try {
+      dbInstance.settings({
+        experimentalForceLongPolling: true
+      });
+      console.log("⚡ DCD Cloud: Firestore long-polling settings applied!");
+    } catch (e) {
+      console.warn("Could not apply Firestore settings:", e);
+    }
+    
     useFirebase = true;
     console.log("⚡ DCD Cloud: Firebase Firestore initialized successfully!");
   } else {
