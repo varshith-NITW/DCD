@@ -179,7 +179,9 @@ const db = {
       creatorName: currentUser.name,
       createdAt: new Date().toISOString(),
       status: projectData.status || 'Under Review',
-      declinedReason: projectData.declinedReason || ''
+      rejectedReason: projectData.rejectedReason || '',
+      acceptedModifications: projectData.acceptedModifications || '',
+      declinedReason: projectData.rejectedReason || ''
     };
 
     // 1. Try MongoDB Atlas
@@ -231,7 +233,9 @@ const db = {
       shortDescription: updatedData.shortDescription !== undefined ? updatedData.shortDescription : project.shortDescription,
       description: updatedData.description !== undefined ? updatedData.description : project.description,
       status: updatedData.status !== undefined ? updatedData.status : (project.status || 'Under Review'),
-      declinedReason: updatedData.status === 'Declined' ? (updatedData.declinedReason !== undefined ? updatedData.declinedReason : project.declinedReason) : ''
+      rejectedReason: (updatedData.status === 'Declined' || updatedData.status === 'Rejected') ? (updatedData.rejectedReason !== undefined ? updatedData.rejectedReason : (project.rejectedReason || '')) : '',
+      acceptedModifications: updatedData.status === 'Accepted' ? (updatedData.acceptedModifications !== undefined ? updatedData.acceptedModifications : (project.acceptedModifications || '')) : '',
+      declinedReason: (updatedData.status === 'Declined' || updatedData.status === 'Rejected') ? (updatedData.rejectedReason !== undefined ? updatedData.rejectedReason : (project.rejectedReason || '')) : ''
     };
 
     // 1. Try MongoDB Atlas
@@ -309,7 +313,7 @@ const db = {
   // Wipe all projects (Admin Only) (Async)
   async wipeAllProjects() {
     const currentUser = this.getCurrentUser();
-    if (!currentUser || (currentUser.role !== 'Teacher (Admin)' && currentUser.username !== 'admin1818')) {
+    if (!currentUser || (currentUser.role !== 'Teacher (Admin)' && !currentUser.username.toLowerCase().startsWith('admin1818'))) {
       throw new Error('Unauthorized: Only administrators can wipe projects.');
     }
 
@@ -588,12 +592,12 @@ const db = {
   // Delete a user (Admin Only) (Async)
   async deleteUser(username) {
     const currentUser = this.getCurrentUser();
-    if (!currentUser || (currentUser.role !== 'Teacher (Admin)' && currentUser.username !== 'admin1818')) {
+    if (!currentUser || (currentUser.role !== 'Teacher (Admin)' && !currentUser.username.toLowerCase().startsWith('admin1818'))) {
       throw new Error('Unauthorized: Only administrators can remove users.');
     }
 
     const normUsername = username.toLowerCase().trim();
-    if (normUsername === 'admin1818') {
+    if (normUsername.startsWith('admin1818')) {
       throw new Error('Unauthorized: You cannot remove the system administrator account.');
     }
 
@@ -629,7 +633,7 @@ const db = {
   canEdit(user, project) {
     if (!user) return false;
     // Admins can edit/delete any design module
-    if (user.role === 'Teacher (Admin)' || user.username === 'admin1818') {
+    if (user.role === 'Teacher (Admin)' || user.username.toLowerCase().startsWith('admin1818')) {
       return true;
     }
     // Students can only edit/delete their own modules

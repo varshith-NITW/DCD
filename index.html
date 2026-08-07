@@ -134,15 +134,19 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="projStatus">Submission Status</label>
-            <select id="projStatus" class="form-input" onchange="toggleDeclinedReason('add')">
+            <select id="projStatus" class="form-input" onchange="toggleFeedbackFields('add')">
               <option value="Under Review" selected>Under Review</option>
               <option value="Accepted">Accepted</option>
-              <option value="Declined">Declined</option>
+              <option value="Rejected">Rejected</option>
             </select>
           </div>
-          <div class="form-group" id="projDeclinedReasonGroup" style="display: none;">
-            <label class="form-label" for="projDeclinedReason">Declined Reason *</label>
-            <textarea id="projDeclinedReason" class="form-textarea" placeholder="Explain why the design was declined..."></textarea>
+          <div class="form-group" id="projRejectedReasonGroup" style="display: none;">
+            <label class="form-label" for="projRejectedReason">Reason for Rejection *</label>
+            <textarea id="projRejectedReason" class="form-textarea" placeholder="Explain why the design was rejected..."></textarea>
+          </div>
+          <div class="form-group" id="projAcceptedModificationsGroup" style="display: none;">
+            <label class="form-label" for="projAcceptedModifications">Required Modifications / Feedback</label>
+            <textarea id="projAcceptedModifications" class="form-textarea" placeholder="Describe any modifications or notes for the accepted design..."></textarea>
           </div>
           
           <div class="form-actions">
@@ -173,9 +177,14 @@
           <span>Date: <span id="detailModalDate">July 2026</span></span>
         </div>
 
-        <div id="detailModalDeclinedReasonBlock" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); padding: 1rem; border-radius: var(--border-radius-sm); margin-bottom: 1.5rem; color: #fca5a5;">
-          <strong style="color: #ef4444; display: block; margin-bottom: 0.25rem;">❌ Reason for Decline:</strong>
-          <span id="detailModalDeclinedReasonText"></span>
+        <div id="detailModalRejectedReasonBlock" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); padding: 1rem; border-radius: var(--border-radius-sm); margin-bottom: 1.5rem; color: #fca5a5;">
+          <strong style="color: #ef4444; display: block; margin-bottom: 0.25rem;">❌ Reason for Rejection:</strong>
+          <span id="detailModalRejectedReasonText"></span>
+        </div>
+
+        <div id="detailModalAcceptedModificationsBlock" style="display: none; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent-primary); padding: 1rem; border-radius: var(--border-radius-sm); margin-bottom: 1.5rem; color: #a7f3d0;">
+          <strong style="color: #10b981; display: block; margin-bottom: 0.25rem;">✅ Required Modifications / Notes:</strong>
+          <span id="detailModalAcceptedModificationsText"></span>
         </div>
         
         <div id="detailModalBody" style="line-height: 1.7; color: var(--text-secondary); margin-bottom: 2rem; max-height: 250px; overflow-y: auto; padding-right: 0.5rem;">
@@ -213,15 +222,19 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="editStatus">Submission Status</label>
-            <select id="editStatus" class="form-input" onchange="toggleDeclinedReason('edit')">
+            <select id="editStatus" class="form-input" onchange="toggleFeedbackFields('edit')">
               <option value="Under Review">Under Review</option>
               <option value="Accepted">Accepted</option>
-              <option value="Declined">Declined</option>
+              <option value="Rejected">Rejected</option>
             </select>
           </div>
-          <div class="form-group" id="editDeclinedReasonGroup" style="display: none;">
-            <label class="form-label" for="editDeclinedReason">Declined Reason *</label>
-            <textarea id="editDeclinedReason" class="form-textarea" placeholder="Explain why the design was declined..."></textarea>
+          <div class="form-group" id="editRejectedReasonGroup" style="display: none;">
+            <label class="form-label" for="editRejectedReason">Reason for Rejection *</label>
+            <textarea id="editRejectedReason" class="form-textarea" placeholder="Explain why the design was rejected..."></textarea>
+          </div>
+          <div class="form-group" id="editAcceptedModificationsGroup" style="display: none;">
+            <label class="form-label" for="editAcceptedModifications">Required Modifications / Feedback</label>
+            <textarea id="editAcceptedModifications" class="form-textarea" placeholder="Describe any modifications or notes for the accepted design..."></textarea>
           </div>
           
           <div class="form-actions">
@@ -337,7 +350,7 @@
 
         // Toggle Admin Panel Button visibility
         const adminBtn = document.getElementById('adminPanelBtn');
-        if (user.role === 'Teacher (Admin)' || user.username === 'admin1818') {
+        if (user.role === 'Teacher (Admin)' || user.username.toLowerCase().startsWith('admin1818')) {
           adminBtn.style.display = 'inline-flex';
         } else {
           adminBtn.style.display = 'none';
@@ -385,8 +398,8 @@
       event.preventDefault();
       hideError();
 
-      const usernameInput = document.getElementById('loginUsername').value;
-      const passwordInput = document.getElementById('loginPassword').value;
+      const usernameInput = document.getElementById('loginUsername').value.trim();
+      const passwordInput = document.getElementById('loginPassword').value.trim();
 
       try {
         await ProjectDb.login(usernameInput, passwordInput);
@@ -401,9 +414,9 @@
       event.preventDefault();
       hideError();
 
-      const nameInput = document.getElementById('regName').value;
-      const usernameInput = document.getElementById('regUsername').value;
-      const passwordInput = document.getElementById('regPassword').value;
+      const nameInput = document.getElementById('regName').value.trim();
+      const usernameInput = document.getElementById('regUsername').value.trim();
+      const passwordInput = document.getElementById('regPassword').value.trim();
 
       try {
         await ProjectDb.register(usernameInput, nameInput, passwordInput);
@@ -462,7 +475,7 @@
         if (status === 'Accepted') {
           statusColor = '#10b981';
           statusBg = 'rgba(16, 185, 129, 0.1)';
-        } else if (status === 'Declined') {
+        } else if (status === 'Declined' || status === 'Rejected') {
           statusColor = '#ef4444';
           statusBg = 'rgba(239, 68, 68, 0.1)';
         } else {
@@ -524,23 +537,32 @@
       if (status === 'Accepted') {
         statusColor = '#10b981';
         statusBg = 'rgba(16, 185, 129, 0.1)';
-      } else if (status === 'Declined') {
+      } else if (status === 'Declined' || status === 'Rejected') {
         statusColor = '#ef4444';
         statusBg = 'rgba(239, 68, 68, 0.1)';
       } else {
         statusColor = '#f59e0b';
         statusBg = 'rgba(245, 158, 11, 0.1)';
       }
-      statusContainer.innerHTML = `<span style="font-size: 0.8rem; padding: 0.25rem 0.6rem; border-radius: 4px; font-weight: 600; color: ${statusColor}; background: ${statusBg}; border: 1px solid ${statusColor};">${status}</span>`;
+      statusContainer.innerHTML = `<span style="font-size: 0.8rem; padding: 0.25rem 0.6rem; border-radius: 4px; font-weight: 600; color: ${statusColor}; background: ${statusBg}; border: 1px solid ${statusColor};">${status === 'Declined' ? 'Rejected' : status}</span>`;
 
-      // Handle Declined Reason Block
-      const declinedReasonBlock = document.getElementById('detailModalDeclinedReasonBlock');
-      const declinedReasonText = document.getElementById('detailModalDeclinedReasonText');
-      if (status === 'Declined') {
-        declinedReasonText.innerText = project.declinedReason || 'No reason specified.';
-        declinedReasonBlock.style.display = 'block';
+      // Handle Rejection and Acceptance Feedback Blocks
+      const rejectedReasonBlock = document.getElementById('detailModalRejectedReasonBlock');
+      const rejectedReasonText = document.getElementById('detailModalRejectedReasonText');
+      const acceptedModificationsBlock = document.getElementById('detailModalAcceptedModificationsBlock');
+      const acceptedModificationsText = document.getElementById('detailModalAcceptedModificationsText');
+
+      if (status === 'Declined' || status === 'Rejected') {
+        rejectedReasonText.innerText = project.rejectedReason || project.declinedReason || 'No reason specified.';
+        rejectedReasonBlock.style.display = 'block';
+        acceptedModificationsBlock.style.display = 'none';
+      } else if (status === 'Accepted') {
+        acceptedModificationsText.innerText = project.acceptedModifications || 'None required / No feedback specified.';
+        acceptedModificationsBlock.style.display = 'block';
+        rejectedReasonBlock.style.display = 'none';
       } else {
-        declinedReasonBlock.style.display = 'none';
+        rejectedReasonBlock.style.display = 'none';
+        acceptedModificationsBlock.style.display = 'none';
       }
 
       creatorEl.innerText = project.creatorName;
@@ -573,7 +595,7 @@
       const currentUser = ProjectDb.getCurrentUser();
       const editBtn = document.getElementById('detailEditBtn');
       const deleteBtn = document.getElementById('detailDeleteBtn');
-      if (currentUser && (currentUser.role === 'Teacher (Admin)' || currentUser.username === 'admin1818' || project.creatorId === currentUser.id)) {
+      if (currentUser && (currentUser.role === 'Teacher (Admin)' || currentUser.username.toLowerCase().startsWith('admin1818') || project.creatorId === currentUser.id)) {
         editBtn.style.display = 'inline-flex';
         deleteBtn.style.display = 'inline-flex';
       } else {
@@ -598,18 +620,35 @@
       document.getElementById('editDesc').value = project.description || '';
 
       const status = project.status || 'Under Review';
-      document.getElementById('editStatus').value = status;
+      document.getElementById('editStatus').value = status === 'Declined' ? 'Rejected' : status;
       
-      const editDeclinedGroup = document.getElementById('editDeclinedReasonGroup');
-      const editDeclinedInput = document.getElementById('editDeclinedReason');
-      if (status === 'Declined') {
-        editDeclinedInput.value = project.declinedReason || '';
-        editDeclinedGroup.style.display = 'block';
-        editDeclinedInput.required = true;
+      // Populate and toggle feedback fields
+      const editRejectedReasonGroup = document.getElementById('editRejectedReasonGroup');
+      const editRejectedReason = document.getElementById('editRejectedReason');
+      const editAcceptedModificationsGroup = document.getElementById('editAcceptedModificationsGroup');
+      const editAcceptedModifications = document.getElementById('editAcceptedModifications');
+
+      if (status === 'Declined' || status === 'Rejected') {
+        editRejectedReason.value = project.rejectedReason || project.declinedReason || '';
+        editRejectedReasonGroup.style.display = 'block';
+        editRejectedReason.required = true;
+        editAcceptedModifications.value = '';
+        editAcceptedModificationsGroup.style.display = 'none';
+        editAcceptedModifications.required = false;
+      } else if (status === 'Accepted') {
+        editAcceptedModifications.value = project.acceptedModifications || '';
+        editAcceptedModificationsGroup.style.display = 'block';
+        editAcceptedModifications.required = false;
+        editRejectedReason.value = '';
+        editRejectedReasonGroup.style.display = 'none';
+        editRejectedReason.required = false;
       } else {
-        editDeclinedInput.value = '';
-        editDeclinedGroup.style.display = 'none';
-        editDeclinedInput.required = false;
+        editRejectedReason.value = '';
+        editRejectedReasonGroup.style.display = 'none';
+        editRejectedReason.required = false;
+        editAcceptedModifications.value = '';
+        editAcceptedModificationsGroup.style.display = 'none';
+        editAcceptedModifications.required = false;
       }
 
       closeDetailsModal();
@@ -621,23 +660,43 @@
       document.getElementById('editModal').classList.remove('active');
     }
 
-    function toggleDeclinedReason(mode) {
+    function toggleFeedbackFields(mode) {
       const selectId = mode === 'add' ? 'projStatus' : 'editStatus';
-      const groupId = mode === 'add' ? 'projDeclinedReasonGroup' : 'editDeclinedReasonGroup';
-      const inputId = mode === 'add' ? 'projDeclinedReason' : 'editDeclinedReason';
-      
-      const status = document.getElementById(selectId).value;
-      const groupEl = document.getElementById(groupId);
-      const inputEl = document.getElementById(inputId);
+      const rejectedGroupId = mode === 'add' ? 'projRejectedReasonGroup' : 'editRejectedReasonGroup';
+      const rejectedInputId = mode === 'add' ? 'projRejectedReason' : 'editRejectedReason';
+      const acceptedGroupId = mode === 'add' ? 'projAcceptedModificationsGroup' : 'editAcceptedModificationsGroup';
+      const acceptedInputId = mode === 'add' ? 'projAcceptedModifications' : 'editAcceptedModifications';
 
-      if (status === 'Declined') {
-        groupEl.style.display = 'block';
-        inputEl.required = true;
-        inputEl.focus();
+      const status = document.getElementById(selectId).value;
+      const rejectedGroup = document.getElementById(rejectedGroupId);
+      const rejectedInput = document.getElementById(rejectedInputId);
+      const acceptedGroup = document.getElementById(acceptedGroupId);
+      const acceptedInput = document.getElementById(acceptedInputId);
+
+      if (status === 'Declined' || status === 'Rejected') {
+        rejectedGroup.style.display = 'block';
+        rejectedInput.required = true;
+        rejectedInput.focus();
+        
+        acceptedGroup.style.display = 'none';
+        acceptedInput.required = false;
+        acceptedInput.value = '';
+      } else if (status === 'Accepted') {
+        acceptedGroup.style.display = 'block';
+        acceptedInput.required = false;
+        acceptedInput.focus();
+        
+        rejectedGroup.style.display = 'none';
+        rejectedInput.required = false;
+        rejectedInput.value = '';
       } else {
-        groupEl.style.display = 'none';
-        inputEl.required = false;
-        inputEl.value = '';
+        rejectedGroup.style.display = 'none';
+        rejectedInput.required = false;
+        rejectedInput.value = '';
+        
+        acceptedGroup.style.display = 'none';
+        acceptedInput.required = false;
+        acceptedInput.value = '';
       }
     }
 
@@ -649,7 +708,8 @@
       const shortDescription = document.getElementById('editShortDesc').value.trim();
       const description = document.getElementById('editDesc').value.trim();
       const status = document.getElementById('editStatus').value;
-      const declinedReason = document.getElementById('editDeclinedReason').value.trim();
+      const rejectedReason = document.getElementById('editRejectedReason').value.trim();
+      const acceptedModifications = document.getElementById('editAcceptedModifications').value.trim();
 
       try {
         await ProjectDb.updateProject(activeProjectId, {
@@ -657,7 +717,8 @@
           shortDescription,
           description,
           status,
-          declinedReason: status === 'Declined' ? declinedReason : ''
+          rejectedReason: (status === 'Declined' || status === 'Rejected') ? rejectedReason : '',
+          acceptedModifications: status === 'Accepted' ? acceptedModifications : ''
         });
         
         closeEditModal();
@@ -691,7 +752,8 @@
       const shortDescription = document.getElementById('projShortDesc').value.trim();
       const description = document.getElementById('projDesc').value.trim();
       const status = document.getElementById('projStatus').value;
-      const declinedReason = document.getElementById('projDeclinedReason').value.trim();
+      const rejectedReason = document.getElementById('projRejectedReason').value.trim();
+      const acceptedModifications = document.getElementById('projAcceptedModifications').value.trim();
 
       try {
         await ProjectDb.createProject({
@@ -699,7 +761,8 @@
           shortDescription,
           description,
           status,
-          declinedReason: status === 'Declined' ? declinedReason : ''
+          rejectedReason: (status === 'Declined' || status === 'Rejected') ? rejectedReason : '',
+          acceptedModifications: status === 'Accepted' ? acceptedModifications : ''
         });
         
         closeAddModal();
@@ -735,7 +798,7 @@
           item.style.borderBottom = '1px solid var(--border-color)';
           
           let actionHtml = '';
-          if (u.username !== 'admin1818' && (!currentUser || u.username !== currentUser.username)) {
+          if (!u.username.toLowerCase().startsWith('admin1818') && (!currentUser || u.username !== currentUser.username)) {
             actionHtml = `<button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: none; background: var(--danger);" onclick="handleRemoveUser('${u.username}')">Remove</button>`;
           }
 
