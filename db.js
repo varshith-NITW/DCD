@@ -1,9 +1,9 @@
 // Simulated, Firebase, & MongoDB Atlas Database Engine for Classroom DCD Hub with Authorization
 
 const SEED_USERS = [
-  { id: 'admin1818', username: 'admin1818@nitw.ac.in', name: 'DCD Administrator', role: 'Teacher (Admin)', avatar: '🎓', password: 'admin-1818' },
-  { id: 'alice', username: 'alice@student.nitw.ac.in', name: 'Alice Smith', role: 'Student', avatar: '👩‍💻', password: 'alice123' },
-  { id: 'bob', username: 'bob@student.nitw.ac.in', name: 'Bob Jones', role: 'Student', avatar: '👨‍💻', password: 'bob123' }
+  { id: 'admin1818', username: 'admin1818@nitw.ac.in', name: 'DCD Administrator', rollNumber: 'Faculty (Admin)', role: 'Teacher (Admin)', avatar: '🎓', password: 'admin-1818' },
+  { id: 'alice', username: 'alice@student.nitw.ac.in', name: 'Alice Smith', rollNumber: '25ECB01', role: 'Student', avatar: '👩‍💻', password: 'alice123' },
+  { id: 'bob', username: 'bob@student.nitw.ac.in', name: 'Bob Jones', rollNumber: '25ECB02', role: 'Student', avatar: '👨‍💻', password: 'bob123' }
 ];
 
 // Seed projects is empty by default so the interface starts completely clean
@@ -177,6 +177,7 @@ const db = {
       description: projectData.description || '',
       creatorId: currentUser.id,
       creatorName: currentUser.name,
+      creatorRollNumber: currentUser.rollNumber || 'N/A',
       createdAt: new Date().toISOString(),
       status: projectData.status || 'Under Review',
       rejectedReason: projectData.rejectedReason || '',
@@ -440,6 +441,7 @@ const db = {
           id: user.id,
           username: user.username,
           name: user.name,
+          rollNumber: user.rollNumber || 'N/A',
           role: user.role,
           avatar: user.avatar
         };
@@ -478,6 +480,7 @@ const db = {
           id: user.id,
           username: user.username,
           name: user.name,
+          rollNumber: user.rollNumber || 'N/A',
           role: user.role,
           avatar: user.avatar
         };
@@ -503,6 +506,7 @@ const db = {
       id: user.id,
       username: user.username,
       name: user.name,
+      rollNumber: user.rollNumber || 'N/A',
       role: user.role,
       avatar: user.avatar
     };
@@ -517,12 +521,13 @@ const db = {
     window.dispatchEvent(new Event('storage'));
   },
 
-  async register(username, name, password) {
+  async register(username, name, rollNumber, password) {
     this.init();
     const normUsername = username.toLowerCase().trim();
     const normName = name.trim().toLowerCase();
+    const normRoll = rollNumber.trim().toUpperCase();
 
-    if (!normUsername || !name || !password) {
+    if (!normUsername || !name || !rollNumber || !password) {
       throw new Error('All fields are required.');
     }
 
@@ -554,6 +559,7 @@ const db = {
       id: 'user-' + Math.random().toString(36).substr(2, 9),
       username: normUsername,
       name: name.trim(),
+      rollNumber: normRoll,
       role: 'Student',
       avatar: randomAvatar,
       password: password

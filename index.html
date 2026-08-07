@@ -72,6 +72,10 @@
           <input type="text" id="regName" class="form-input" placeholder="e.g. Charlie Brown" required autocomplete="name">
         </div>
         <div class="form-group">
+          <label class="form-label" for="regRollNumber">Roll Number</label>
+          <input type="text" id="regRollNumber" class="form-input" placeholder="e.g. 25ECB04" required autocomplete="off">
+        </div>
+        <div class="form-group">
           <label class="form-label" for="regUsername">College Email</label>
           <input type="email" id="regUsername" class="form-input" placeholder="e.g. student@student.nitw.ac.in" required autocomplete="username">
         </div>
@@ -172,7 +176,7 @@
         </div>
         
         <div class="detail-meta-row" style="display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-          <span>Created by: <strong id="detailModalCreator">Alice</strong></span>
+          <span>Created by: <strong id="detailModalCreator">Alice</strong> <span id="detailModalRoll" style="color: var(--text-muted);"></span></span>
           <span>•</span>
           <span>Date: <span id="detailModalDate">July 2026</span></span>
         </div>
@@ -411,11 +415,12 @@
       hideError();
 
       const nameInput = document.getElementById('regName').value.trim();
+      const rollNumberInput = document.getElementById('regRollNumber').value.trim();
       const usernameInput = document.getElementById('regUsername').value.trim();
       const passwordInput = document.getElementById('regPassword').value.trim();
 
       try {
-        await ProjectDb.register(usernameInput, nameInput, passwordInput);
+        await ProjectDb.register(usernameInput, nameInput, rollNumberInput, passwordInput);
         document.getElementById('registerForm').reset();
         await checkAuth();
       } catch (err) {
@@ -491,7 +496,7 @@
                 <div class="project-author-avatar">
                   ${p.creatorId === 'alice' ? '👩‍💻' : p.creatorId === 'bob' ? '👨‍💻' : '👤'}
                 </div>
-                <span>${p.creatorName}</span>
+                <span>${p.creatorName} ${p.creatorRollNumber ? `<span style="color: var(--text-muted); font-size: 0.75rem; margin-left: 0.25rem;">(${p.creatorRollNumber})</span>` : ''}</span>
               </div>
             </div>
           </div>
@@ -562,6 +567,7 @@
       }
 
       creatorEl.innerText = project.creatorName;
+      document.getElementById('detailModalRoll').innerText = project.creatorRollNumber ? `(${project.creatorRollNumber})` : '';
 
       const createdDate = new Date(project.createdAt);
       dateEl.innerText = createdDate.toLocaleDateString(undefined, { 
