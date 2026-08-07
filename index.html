@@ -262,6 +262,7 @@
         <h4 style="margin-bottom: 0.75rem; color: var(--danger); font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">System Utilities</h4>
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
           <button class="btn btn-danger" onclick="handleWipeAllProjects()">🗑️ Wipe All Published Designs</button>
+          <button class="btn btn-secondary" onclick="handleResetDatabaseAdmin()">🔄 Reset Entire Database to Defaults</button>
         </div>
       </div>
     </div>
@@ -836,6 +837,15 @@
       }
     }
 
+    async function handleResetDatabaseAdmin() {
+      if (confirm('⚠️ WARNING: This will reset the database and log you out. Proceed?')) {
+        try {
+          await ProjectDb.resetDatabase();
+        } catch (err) {
+          alert('Operation failed: ' + err.message);
+        }
+      }
+    }
 
     async function handleRemoveUser(username) {
       if (confirm(`Are you sure you want to permanently remove classmate @${username}?`)) {
