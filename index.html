@@ -328,11 +328,30 @@
       window.addEventListener('storage', async () => {
         await checkAuth();
       });
+
+      // Verify session when user returns to/focuses the tab
+      window.addEventListener('focus', async () => {
+        await checkAuth();
+      });
     });
 
     // Check if the user is authenticated and update screen state (Async)
     async function checkAuth() {
-      const user = ProjectDb.getCurrentUser();
+      let user = ProjectDb.getCurrentUser();
+      
+      if (user) {
+        try {
+          const userExists = await ProjectDb.verifyUserExists(user.username);
+          if (!userExists) {
+            alert('Your session has expired because your account was removed by the administrator.');
+            ProjectDb.logout();
+            user = null;
+          }
+        } catch (err) {
+          console.error("Failed to verify user validation:", err);
+        }
+      }
+
       const authContainer = document.getElementById('authContainer');
       const dashboardContent = document.getElementById('dashboardContent');
       const profileBadge = document.getElementById('userProfileBadge');

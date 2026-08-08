@@ -169,6 +169,13 @@ const db = {
       throw new Error('You must be logged in to create a project.');
     }
 
+    const userExists = await this.verifyUserExists(currentUser.username);
+    if (!userExists) {
+      localStorage.removeItem('dcd_session_v4');
+      window.dispatchEvent(new Event('storage'));
+      throw new Error('Unauthorized: Your user account has been removed by the administrator.');
+    }
+
     const newProjectId = 'proj-' + Math.random().toString(36).substr(2, 9);
     const newProject = {
       id: newProjectId,
@@ -224,6 +231,17 @@ const db = {
       throw new Error('Project not found');
     }
 
+    if (!currentUser) {
+      throw new Error('Unauthorized: You must be logged in.');
+    }
+
+    const userExists = await this.verifyUserExists(currentUser.username);
+    if (!userExists) {
+      localStorage.removeItem('dcd_session_v4');
+      window.dispatchEvent(new Event('storage'));
+      throw new Error('Unauthorized: Your user account has been removed by the administrator.');
+    }
+
     if (!this.canEdit(currentUser, project)) {
       throw new Error('Unauthorized: You do not have permission to edit this project.');
     }
@@ -277,6 +295,17 @@ const db = {
     const currentUser = this.getCurrentUser();
     const project = await this.getProject(id);
     if (!project) return;
+
+    if (!currentUser) {
+      throw new Error('Unauthorized: You must be logged in.');
+    }
+
+    const userExists = await this.verifyUserExists(currentUser.username);
+    if (!userExists) {
+      localStorage.removeItem('dcd_session_v4');
+      window.dispatchEvent(new Event('storage'));
+      throw new Error('Unauthorized: Your user account has been removed by the administrator.');
+    }
 
     if (!this.canEdit(currentUser, project)) {
       throw new Error('Unauthorized: You do not have permission to delete this project.');
@@ -404,6 +433,40 @@ const db = {
     this.init();
     const session = localStorage.getItem('dcd_session_v4');
     return session ? JSON.parse(session) : null;
+  },
+
+  // Verify if a user exists in the cloud/local database
+  async verifyUserExists(username) {
+    this.init();
+    const normUsername = username.toLowerCase().trim();
+    if (normUsername.toLowerCase().startsWith('admin1818')) {
+      return true; // Admin is always valid
+    }
+
+    // 1. Try MongoDB Atlas
+    if (this.isMongo()) {
+      try {
+        const mongo = await this.getMongoDb();
+        const user = await mongo.collection('users').findOne({ username: normUsername });
+        return !!user;
+      } catch (err) {
+        console.error("Error verifying user in MongoDB Atlas: ", err);
+      }
+    }
+
+    // 2. Try Firebase Firestore
+    if (this.isFirebase()) {
+      try {
+        const doc = await window.DcdFirebase.db.collection('users').doc(normUsername).get();
+        return doc.exists;
+      } catch (err) {
+        console.error("Error verifying user in Firebase: ", err);
+      }
+    }
+
+    // 3. Local Storage Fallback
+    const users = await this.getUsers();
+    return users.some(u => u.username.toLowerCase() === normUsername);
   },
 
   async login(username, password) {
