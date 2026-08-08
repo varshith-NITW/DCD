@@ -170,7 +170,7 @@ const db = {
     }
 
     const userExists = await this.verifyUserExists(currentUser.username);
-    if (!userExists) {
+    if (userExists === false) {
       localStorage.removeItem('dcd_session_v4');
       window.dispatchEvent(new Event('storage'));
       throw new Error('Unauthorized: Your user account has been removed by the administrator.');
@@ -236,7 +236,7 @@ const db = {
     }
 
     const userExists = await this.verifyUserExists(currentUser.username);
-    if (!userExists) {
+    if (userExists === false) {
       localStorage.removeItem('dcd_session_v4');
       window.dispatchEvent(new Event('storage'));
       throw new Error('Unauthorized: Your user account has been removed by the administrator.');
@@ -301,7 +301,7 @@ const db = {
     }
 
     const userExists = await this.verifyUserExists(currentUser.username);
-    if (!userExists) {
+    if (userExists === false) {
       localStorage.removeItem('dcd_session_v4');
       window.dispatchEvent(new Event('storage'));
       throw new Error('Unauthorized: Your user account has been removed by the administrator.');
@@ -451,6 +451,7 @@ const db = {
         return !!user;
       } catch (err) {
         console.error("Error verifying user in MongoDB Atlas: ", err);
+        return true; // Assume valid on connection errors
       }
     }
 
@@ -461,12 +462,17 @@ const db = {
         return doc.exists;
       } catch (err) {
         console.error("Error verifying user in Firebase: ", err);
+        return true; // Assume valid on connection errors
       }
     }
 
     // 3. Local Storage Fallback
-    const users = await this.getUsers();
-    return users.some(u => u.username.toLowerCase() === normUsername);
+    try {
+      const users = await this.getUsers();
+      return users.some(u => u.username.toLowerCase() === normUsername);
+    } catch (err) {
+      return true;
+    }
   },
 
   async login(username, password) {

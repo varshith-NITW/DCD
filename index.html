@@ -342,7 +342,7 @@
       if (user) {
         try {
           const userExists = await ProjectDb.verifyUserExists(user.username);
-          if (!userExists) {
+          if (userExists === false) {
             alert('Your session has expired because your account was removed by the administrator.');
             ProjectDb.logout();
             user = null;
