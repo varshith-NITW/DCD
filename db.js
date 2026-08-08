@@ -600,11 +600,21 @@ const db = {
       throw new Error('All fields are required.');
     }
 
+    // Roll number must be exactly 9 characters long
+    if (normRoll.length !== 9) {
+      throw new Error('Roll number must be exactly 9 characters long (e.g. 25ECB0B04).');
+    }
+
     // Validate college email domain restriction
     const allowedDomains = ['@student.nitw.ac.in', '@nitw.ac.in'];
     const isCollegeEmail = allowedDomains.some(domain => normUsername.endsWith(domain));
     if (!isCollegeEmail) {
       throw new Error('Registration is restricted to college emails only (@student.nitw.ac.in or @nitw.ac.in).');
+    }
+
+    // Student email must contain their roll number in lowercase
+    if (normUsername.endsWith('@student.nitw.ac.in') && !normUsername.includes(normRoll.toLowerCase())) {
+      throw new Error(`Your student email must contain your roll number in lowercase (e.g. ms${normRoll.toLowerCase()}@student.nitw.ac.in).`);
     }
 
     if (normUsername === 'admin1818@nitw.ac.in') {
