@@ -614,7 +614,7 @@ const db = {
 
     // Student email must contain their roll number in lowercase
     if (normUsername.endsWith('@student.nitw.ac.in') && !normUsername.includes(normRoll.toLowerCase())) {
-      throw new Error(`Your student email must contain your roll number in lowercase (e.g. ms${normRoll.toLowerCase()}@student.nitw.ac.in).`);
+      throw new Error('Email Invalid');
     }
 
     if (normUsername === 'admin1818@nitw.ac.in') {
